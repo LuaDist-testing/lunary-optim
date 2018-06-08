@@ -1,0 +1,19 @@
+#!/usr/bin/env lua
+
+local util = require 'util'
+local serial = require 'serial'
+require 'riff'
+
+local luaname,riffname = ...
+if not luaname or not riffname then
+	print("usage: lua2riff <luaname> <riffname>")
+	os.exit(2)
+end
+
+local stream = serial.filestream(assert(io.open(riffname, "wb")))
+
+local riff = assert(dofile(luaname))
+
+assert(serial.write.riff_file(stream, riff))
+
+-- vi: ft=lua

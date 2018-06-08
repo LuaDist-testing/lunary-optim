@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+lang="en">
+<head>
+<title>Lunary</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<link rel="stylesheet" href="doc.css" type="text/css"/>
+</head>
+<body>
+
+<div class="chapter" id="header">
+<img width="128" height="128" alt="Lunary" src="logo.png"/>
+<p>A binary format I/O framework for Lua</p>
+<p class="bar">
+<a href="index.html">home</a> &middot;
+<a href="index.html#download">download</a> &middot;
+<a href="index.html#installation">installation</a> &middot;
+<a href="manual.html">manual</a> &middot;
+<a href="examples.html">examples</a>
+</p>
+</div>
+
+<div class="chapter">
+<h1>5 - <a name="examples">Examples</a></h1>
+
+<p>Here are some examples file descriptions using Lunary.</p>
+
+<hr/>
+
+<h2>5.1 - PNG file format</h2>
+
+<p><a href="examples/png.lua">png.lua</a> contains a partial description of the PNG file format. It can parse the chunk structure, and some chunk content (like embedded texts), but not actual image data. Two helpers scripts allow converting PNG files to and from Lua, <a href="examples/png2lua">png2lua</a> and <a href="examples/lua2png">lua2png</a> respectively.</p>
+
+<hr/>
+
+<h2>5.2 - RIFF file format</h2>
+
+<p><a href="examples/png.lua">riff.lua</a> contains a partial description of the RIFF file format. It can parse the chunk structure, and some chunk content from WAV or AVI files (like embedded texts), but not actual sound or video data. Two helpers scripts allow converting RIFF files to and from Lua, <a href="examples/riff2lua">riff2lua</a> and <a href="examples/lua2riff">lua2riff</a> respectively.</p>
+
+<hr/>
+
+<h2>5.3 - ed2k .met files</h2>
+
+<p>Not shipped with this project, but available online is a description of met files used by popular eDonkey2000 clients like <a href="http://www.emule-project.net/">eMule</a>. It is more complex than the examples above, but they are more complete, in two senses. They use almost all built-in Lunary data types. They are also complete in the sense that they describe <em>all</em> fields of supported .met files. It is therefore possible to generate .met files from scratch using that library.</p>
+
+<p>The <a href="http://piratery.net/trac/ed2k-ltools/browser/met-ltools/serial/met.lua">serial/met.lua</a> file describes all the .met files formats. The <a href="http://piratery.net/trac/ed2k-ltools/browser/met-ltools/met2lua">met2lua</a> script can convert met files to a Lua equivalent and vice-versa.</p>
+
+
+</div>
+
+<div class="chapter" id="footer">
+<small>Last update: 2010-10-09 21:35:10 CEST</small>
+</div>
+
+</body>
+</html>
+

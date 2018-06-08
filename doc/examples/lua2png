@@ -1,0 +1,19 @@
+#!/usr/bin/env lua
+
+local util = require 'util'
+local serial = require 'serial'
+require 'png'
+
+local luaname,pngname = ...
+if not luaname or not pngname then
+	print("usage: lua2png <luaname> <pngname>")
+	os.exit(2)
+end
+
+local stream = serial.filestream(assert(io.open(pngname, "wb")))
+
+local png = assert(dofile(luaname))
+
+assert(serial.write.png_file(stream, png))
+
+-- vi: ft=lua

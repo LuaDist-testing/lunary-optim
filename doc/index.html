@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+lang="en">
+<head>
+<title>Lunary</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<link rel="stylesheet" href="doc.css" type="text/css"/>
+</head>
+<body>
+
+<div class="chapter" id="header">
+<img width="128" height="128" alt="Lunary" src="logo.png"/>
+<p>A binary format I/O framework for Lua</p>
+<p class="bar">
+<a href="index.html">home</a> &middot;
+<a href="index.html#download">download</a> &middot;
+<a href="index.html#installation">installation</a> &middot;
+<a href="manual.html">manual</a> &middot;
+<a href="examples.html">examples</a>
+</p>
+</div>
+
+<div class="chapter">
+<h1>1 - About Lunary</h1>
+
+<p>Lunary is a framework to read and write structured binary data from and to files or network connections. The aim is to provide an easy to use interface to describe any complex binary format, and allow translation to Lua data structures. The focus is placed upon the binary side of the transformation, and further processing may be necessary to obtain the desired Lua structures. On the other hand Lunary should allow reading and writing of any binary format, and bring all the information available to the Lua side.</p>
+
+<p>All built-in data types preserve all the information they read from the streams. This allows reserializing an object even if it's not manipulable by Lua (e.g. an <code>uint64</code> not fitting in a Lua <code>number</code> will be represented by a <code>string</code>, an <code>enum</code> which integer value is not named will be passed as a <code>number</code>). User application or custom formats are required to remove themselves any unnecessary information (invalid value, ordering of entries in a set or a map, etc.).</p>
+
+<p>Lunary name is based on the contraction of Lua and binary, and it sounds moon-themed (it is close to the lunar adjective).</p>
+
+<h2>Support</h2>
+
+<p>All support is done through the <a href="http://www.lua.org/lua-l.html">Lua mailing list</a>. If the traffic becomes too important a specialized mailing list will be created.</p>
+
+<p>Feel free to ask for further developments, especially new data types. I can't guarantee that I'll develop everything you ask, but I want my code to be as useful as possible, so I'll do my best to help you. You can also send me request or bug reports (for code and documentation) directly at <a href="mailto:jerome.vuarand@gmail.com">jerome.vuarand@gmail.com</a>.</p>
+
+<h2>Credits</h2>
+
+<p>This module is written and maintained by <a href="mailto:jerome.vuarand@gmail.com">Jérôme Vuarand</a>.</p>
+
+<p>Lunary is available under a <a href="LICENSE.txt">MIT-style license</a>.</p>
+
+<h2>To do</h2>
+
+<p>Here are some points that I'm going to improve in the near future:</p>
+
+<ul>
+    <li>add signed 64-bits integer support</li>
+    <li>better document errors thrown by the library</li>
+    <li>add a native endianness for types with endianness parameter, or a way to query the native endianness</li>
+</ul>
+
+
+</div>
+
+<div class="chapter">
+<h1>2 - <a name="download">Download</a></h1>
+
+<p>Lunary sources are available in its <a href="http://hg.piratery.net/lunary/">Mercurial repository</a>:</p>
+
+<pre><code>hg clone http://hg.piratery.net/lunary/
+</code></pre>
+
+<p>Tarballs of the latest code can be downloaded directly from there: as <a href="http://hg.piratery.net/lunary/archive/tip.tar.gz">gz</a>, <a href="http://hg.piratery.net/lunary/archive/tip.tar.bz2">bz2</a> or <a href="http://hg.piratery.net/lunary/archive/tip.zip">zip</a>.</p>
+
+<p>Finally, I published some rockspecs. To get a full Lunary (with optional dependencies), simply run:</p>
+
+<pre><code>luarocks install lunary
+</code></pre>
+
+<p>If you're on a platform without a C compiler, and no pre-built rocks are available, you can still get most of the Lunary functionality with its pure-Lua core:</p>
+
+<pre><code>luarocks install lunary-core
+</code></pre>
+
+</div>
+
+<div class="chapter">
+<h1>3 - <a name="installation">Installation</a></h1>
+
+<p>Lunary consists of two Lua modules named <code>serial</code> and <code>serial.util</code>. There is a also an optional <code>serial.optim</code> binary module which replace some functions of <code>serial.util</code> with optimized alternatives to improve Lunary performance.</p>
+
+<p>A simple makefile is provided. The <code>build</code> target builds the <code>serial.optim</code> binary module. The <code>install</code> target installs all the Lunary modules to the <code>PREFIX</code> installation path, which is defined in the Makefile and can be overridden with an environment variable. The <code>installpure</code> target only install pure Lua modules, it can be used on platforms where compiling or using C modules is problematic.</p>
+
+<p>Finally note that Lunary has some optional dependencies. If the dependency is not available, the data types using them will not be available to Lunary users. Here are the data types with dependencies:</p>
+
+<ul>
+    <li>the <code>float</code> and <code>double</code> data types uses <a href="http://www.inf.puc-rio.br/~roberto/struct/">Roberto Ierusalimschy's struct library</a> to serialize native floating point numbers. The library is available at <a href="http://www.inf.puc-rio.br/~roberto/struct/">http://www.inf.puc-rio.br/~roberto/struct/</a>.</li>
+    <li>the <code>flags</code> data type uses the <a href="http://bitop.luajit.org/">BitOp library</a> for bit-wise boolean operations. The library is available at <a href="http://bitop.luajit.org/">http://bitop.luajit.org/</a>.</li>
+</ul>
+
+<p>Note than many other libraries have similar functionality. I wouldn't mind adding support for some of these, just ask.</p>
+</div>
+
+<div class="chapter" id="footer">
+<small>Last update: 2010-10-09 21:35:09 CEST</small>
+</div>
+
+</body>
+</html>
+
