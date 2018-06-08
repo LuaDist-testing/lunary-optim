@@ -1,6 +1,11 @@
-module(..., package.seeall)
+local _M = {}
 
-function dumppair(table, file, level, k, v)
+local string = require 'string'
+local io = require 'io'
+local os = require 'os'
+local lfs = require 'lfs'
+
+function _M.dumppair(table, file, level, k, v)
 	local success,err
 	success,err = file:write(("\t"):rep(level))
 	if not success then return nil,err end
@@ -33,7 +38,7 @@ function dumppair(table, file, level, k, v)
 			end
 			success,err = file:write("table.concat{\n")
 			if not success then return nil,err end
-			success,err = dumptable(t, file, level+1)
+			success,err = _M.dumptable(t, file, level+1)
 			if not success then return nil,err end
 			success,err = file:write(("\t"):rep(level).."}")
 			if not success then return nil,err end
@@ -55,7 +60,7 @@ function dumppair(table, file, level, k, v)
 	elseif type(v)=='table' then
 		success,err = file:write("{\n")
 		if not success then return nil,err end
-		success,err = dumptable(v, file, level+1)
+		success,err = _M.dumptable(v, file, level+1)
 		if not success then return nil,err end
 		success,err = file:write(("\t"):rep(level).."}")
 		if not success then return nil,err end
@@ -67,17 +72,17 @@ function dumppair(table, file, level, k, v)
 	return true
 end
 
-function dumptable(table, file, level)
+function _M.dumptable(table, file, level)
 	assert(type(table)=='table', "dumptable can only dump tables")
 	local done = {}
 	for k,v in ipairs(table) do
-		local success,err = dumppair(table, file, level, nil, v)
+		local success,err = _M.dumppair(table, file, level, nil, v)
 		if not success then return nil,err end
 		done[k] = true
 	end
 	for k,v in pairs(table) do
 		if not done[k] then
-			local success,err = dumppair(table, file, level, k, v)
+			local success,err = _M.dumppair(table, file, level, k, v)
 			if not success then return nil,err end
 			done[k] = true
 		end
@@ -85,7 +90,7 @@ function dumptable(table, file, level)
 	return true
 end
 
-function dumptabletofile(table, filename, oldsuffix)
+function _M.dumptabletofile(table, filename, oldsuffix)
 	if oldsuffix and lfs.attributes(filename, 'mode') then
 		local i,suffix = 0,oldsuffix
 		while io.open(filename..suffix, "rb") do
@@ -99,7 +104,7 @@ function dumptabletofile(table, filename, oldsuffix)
 	if not file then return nil,err end
 	success,err = file:write"return {\n"
 	if not success then return nil,err end
-	success,err = dumptable(table, file, 1)
+	success,err = _M.dumptable(table, file, 1)
 	if not success then return nil,err end
 	success,err = file:write"}\n"
 	if not success then return nil,err end
@@ -108,3 +113,4 @@ function dumptabletofile(table, filename, oldsuffix)
 	return true
 end
 
+return _M

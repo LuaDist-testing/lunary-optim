@@ -1,22 +1,28 @@
+local _M = {}
+local _NAME = ... or 'test'
+
+local _G = require '_G'
+
 local libbit,libstruct
-pcall(function() libbit = require 'bit' end)
+if _VERSION=="Lua 5.2" then
+	pcall(function() libbit = require 'bit32' end)
+else
+	pcall(function() libbit = require 'bit' end)
+end
 pcall(function() libstruct = require 'struct' end)
 
-module(... or 'test', package.seeall)
-
-local util
 if _NAME=='test' then
-	util = require("serial.util")
+	_M.util = require("serial.util")
 else
-	util = require(_NAME..".util")
+	_M.util = require(_NAME..".util")
 end
 
-serialize = {}
-read = {}
-write = {}
-struct = {}
-fstruct = {}
-alias = {}
+_M.serialize = {}
+_M.read = {}
+_M.write = {}
+_M.struct = {}
+_M.fstruct = {}
+_M.alias = {}
 
 _M.verbose = false
 
@@ -40,24 +46,72 @@ end
 local function pop()
 	err_stack[#err_stack] = nil
 end
+local function stackstr()
+	local t = {}
+	for i=#err_stack,1,-1 do
+		t[#t+1] = err_stack[i]
+	end
+	return "in "..table.concat(t, "\nin ")
+end
 local function ioerror(msg)
 	local t = {}
 	for i=#err_stack,1,-1 do
 		t[#t+1] = err_stack[i]
 	end
-	local str = "io error:\n\tin "..table.concat(t, "\n\tin ").."\nwith message: "..msg
+	local str = "io error:\n\t"..stackstr():gsub("\n", "\n\t").."\nwith message: "..msg
 	err_stack = {}
 	return str
 end
+local function eoferror()
+	err_stack = {}
+	return "end of stream"
+end
+local _error = error
+local function error(msg, level)
+	local t = {}
+	for i=#err_stack,1,-1 do
+		t[#t+1] = err_stack[i]
+	end
+	return _error(msg.."\nlunary traceback:\n\tin "..table.concat(t, "\n\tin "), level and level + 1 or 2)
+end
+local function assert(...)
+	local argc = select('#', ...)
+	if argc==0 then
+		error("bad argument #1 to 'assert' (value expected)", 2)
+	elseif not ... then
+		if argc==1 then
+			error("assertion failed!", 2)
+		else
+			local msg = select(2, ...)
+			local t = type(msg)
+			if t=='string' or t=='number' then
+				error(msg, 2)
+			else
+				error("bad argument #2 to 'assert' (string expected, got "..t..")", 2)
+			end
+		end
+	else
+		return ...
+	end
+end
 
-local pack = function(...) return {n=select('#', ...), ...} end
+local pack,unpack
+if _VERSION=="Lua 5.1" then
+	pack = function(...) return {n=select('#', ...), ...} end
+	unpack = _G.unpack
+elseif _VERSION=="Lua 5.2" then
+	pack = table.pack
+	unpack = table.unpack
+else
+	error("unsupported Lua version")
+end
 
 ------------------------------------------------------------------------------
 
 if libbit then
 
-function read.uint(stream, nbits, endianness)
-	assert(endianness=='le' or endianness=='be', "invalid endianness "..tostring(endianness))
+function _M.read.uint(stream, nbits, endianness)
+	assert(nbits==1 or endianness=='le' or endianness=='be', "invalid endianness "..tostring(endianness))
 	push 'uint'
 	if nbits=='*' then
 		assert(stream.bitlength, "infinite precision integers can only be read from streams with a length")
@@ -65,11 +119,13 @@ function read.uint(stream, nbits, endianness)
 	end
 	local data,err = stream:getbits(nbits)
 	if not data then return nil,ioerror(err) end
-	if #data < nbits then return nil,"end of stream" end
+	if #data < nbits then return nil,eoferror() end
 --	print(">", string.byte(data, 1, #data))
 	local bits = {string.byte(data, 1, #data)}
 	local value = 0
-	if endianness=='le' then
+	if nbits==1 then
+		value = bits[1]
+	elseif endianness=='le' then
 		for i,bit in ipairs(bits) do
 			value = value + bit * 2^(i-1)
 		end
@@ -86,7 +142,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function read.sint(stream, nbits, endianness)
+function _M.read.sint(stream, nbits, endianness)
 	assert(endianness=='le' or endianness=='be', "invalid endianness "..tostring(endianness))
 	push 'sint'
 	if nbits=='*' then
@@ -96,7 +152,7 @@ function read.sint(stream, nbits, endianness)
 	assert(nbits >= 2, "signed integers must have at least two bits")
 	local data,err = stream:getbits(nbits)
 	if not data then return nil,ioerror(err) end
-	if #data < nbits then return nil,"end of stream" end
+	if #data < nbits then return nil,eoferror() end
 --	print(">", string.byte(data, 1, #data))
 	local bits = {string.byte(data, 1, #data)}
 	local value = 0
@@ -119,7 +175,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.uint8(value)
+function _M.serialize.uint8(value)
 	push 'uint8'
 	local a = value
 	if value < 0 or value >= 2^8 or math.floor(value)~=value then
@@ -130,18 +186,18 @@ function serialize.uint8(value)
 	return data
 end
 
-function read.uint8(stream)
+function _M.read.uint8(stream)
 	push 'uint8'
 	local data,err = stream:getbytes(1)
 	if not data then return nil,ioerror(err) end
-	if #data < 1 then return nil,"end of stream" end
+	if #data < 1 then return nil,eoferror() end
 	pop()
 	return string.byte(data)
 end
 
 ------------------------------------------------------------------------------
 
-function serialize.sint8(value)
+function _M.serialize.sint8(value)
 	push 'sint8'
 	if value < -2^7 or value >= 2^7 or math.floor(value)~=value then
 		error("invalid value")
@@ -149,15 +205,15 @@ function serialize.sint8(value)
 	if value < 0 then
 		value = value + 2^8
 	end
-	local value,err = serialize.uint8(value)
+	local value,err = _M.serialize.uint8(value)
 	if not value then return nil,err end
 	pop()
 	return value
 end
 
-function read.sint8(stream)
+function _M.read.sint8(stream)
 	push 'sint8'
-	local value,err = read.uint8(stream)
+	local value,err = _M.read.uint8(stream)
 	if not value then return nil,err end
 	if value >= 2^7 then
 		value = value - 2^8
@@ -168,7 +224,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.uint16(value, endianness)
+function _M.serialize.uint16(value, endianness)
 	push 'uint16'
 	if value < 0 or value >= 2^16 or math.floor(value)~=value then
 		error("invalid value")
@@ -188,11 +244,11 @@ function serialize.uint16(value, endianness)
 	return data
 end
 
-function read.uint16(stream, endianness)
+function _M.read.uint16(stream, endianness)
 	push 'uint16'
 	local data,err = stream:getbytes(2)
 	if not data then return nil,ioerror(err) end
-	if #data < 2 then return nil,"end of stream" end
+	if #data < 2 then return nil,eoferror() end
 	local a,b
 	if endianness=='le' then
 		b,a = string.byte(data, 1, 2)
@@ -207,7 +263,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.sint16(value, endianness)
+function _M.serialize.sint16(value, endianness)
 	push 'sint16'
 	if value < -2^15 or value >= 2^15 or math.floor(value)~=value then
 		error("invalid value")
@@ -215,15 +271,15 @@ function serialize.sint16(value, endianness)
 	if value < 0 then
 		value = value + 2 ^ 16
 	end
-	local value,err = serialize.uint16(value, endianness)
+	local value,err = _M.serialize.uint16(value, endianness)
 	if not value then return nil,err end
 	pop()
 	return value
 end
 
-function read.sint16(stream, endianness)
+function _M.read.sint16(stream, endianness)
 	push 'sint16'
-	local value,err = read.uint16(stream, endianness)
+	local value,err = _M.read.uint16(stream, endianness)
 	if not value then return nil,err end
 	if value >= 2^15 then
 		value = value - 2^16
@@ -234,13 +290,13 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.uint32(value, endianness)
+function _M.serialize.uint32(value, endianness)
 	push 'uint32'
 	if type(value)~='number' then
 		error("bad argument #1 to serialize.uint32 (number expected, got "..type(value)..")", 2)
 	end
 	if value < 0 or value >= 2^32 or math.floor(value)~=value then
-		error("invalid value")
+		error("bad argument #1 to serialize.uint32 (number out of range)", 2)
 	end
 	local d = value % 256
 	value = (value - d) / 256
@@ -261,11 +317,11 @@ function serialize.uint32(value, endianness)
 	return data
 end
 
-function read.uint32(stream, endianness)
+function _M.read.uint32(stream, endianness)
 	push 'uint32'
 	local data,err = stream:getbytes(4)
 	if not data then return nil,ioerror(err) end
-	if #data < 4 then return nil,"end of stream" end
+	if #data < 4 then return nil,eoferror() end
 	local a,b,c,d
 	if endianness=='le' then
 		d,c,b,a = string.byte(data, 1, 4)
@@ -280,7 +336,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.sint32(value, endianness)
+function _M.serialize.sint32(value, endianness)
 	push 'sint32'
 	if value < -2^31 or value >= 2^31 or math.floor(value)~=value then
 		error("invalid value")
@@ -288,15 +344,15 @@ function serialize.sint32(value, endianness)
 	if value < 0 then
 		value = value + 2^32
 	end
-	local value,err = serialize.uint32(value, endianness)
+	local value,err = _M.serialize.uint32(value, endianness)
 	if not value then return nil,err end
 	pop()
 	return value
 end
 
-function read.sint32(stream, endianness)
+function _M.read.sint32(stream, endianness)
 	push 'sint32'
-	local value,err = read.uint32(stream, endianness)
+	local value,err = _M.read.uint32(stream, endianness)
 	if not value then return nil,err end
 	if value >= 2^31 then
 		value = value - 2^32
@@ -309,7 +365,7 @@ end
 
 local maxbytes = {}
 do
-	function n(a,b,c,d,e,f,g,h) return (((((((a or 0) * 256 + (b or 0)) * 256 + (c or 0)) * 256 + (d or 0)) * 256 + (e or 0)) * 256 + (f or 0)) * 256 + (g or 0)) * 256 + (h or 0) end
+	local function n(a,b,c,d,e,f,g,h) return (((((((a or 0) * 256 + (b or 0)) * 256 + (c or 0)) * 256 + (d or 0)) * 256 + (e or 0)) * 256 + (f or 0)) * 256 + (g or 0)) * 256 + (h or 0) end
 	-- find maximum byte values
 	local a,b,c,d,e,f,g,h
 	local ma,mb,mc,md,me,mf,mg,mh
@@ -345,7 +401,7 @@ do
 	maxbytes.uint64 = {ma,mb,mc,md,me,mf,mg,mh}
 end
 
-function serialize.uint64(value, endianness)
+function _M.serialize.uint64(value, endianness)
 	push 'uint64'
 	local data
 	local tvalue = type(value)
@@ -392,11 +448,11 @@ function serialize.uint64(value, endianness)
 	return data
 end
 
-function read.uint64(stream, endianness)
+function _M.read.uint64(stream, endianness)
 	push 'uint64'
 	local data,err = stream:getbytes(8)
 	if not data then return nil,ioerror(err) end
-	if #data < 8 then return nil,"end of stream" end
+	if #data < 8 then return nil,eoferror() end
 	local a,b,c,d,e,f,g,h
 	if endianness=='le' then
 		h,g,f,e,d,c,b,a = string.byte(data, 1, 8)
@@ -423,7 +479,124 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.enum(value, enum, int_t, ...)
+do
+	local function n(a,b,c,d,e,f,g,h) return (((((((a or 0) * 256 + (b or 0)) * 256 + (c or 0)) * 256 + (d or 0)) * 256 + (e or 0)) * 256 + (f or 0)) * 256 + (g or 0)) * 256 + (h or 0) end
+	-- find maximum byte values
+	local a,b,c,d,e,f,g,h
+	local ma,mb,mc,md,me,mf,mg,mh
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 000,000,000,000,000,000,2^i-1,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 000,000,000,000,000,2^i-1,255,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 000,000,000,000,2^i-1,255,255,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 000,000,000,2^i-1,255,255,255,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 000,000,2^i-1,255,255,255,255,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 000,2^i-1,255,255,255,255,255,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	for i=1,8 do
+		a,b,c,d,e,f,g,h = 2^i-1,255,255,255,255,255,255,255; if n(a,b,c,d,e,f,g,0) ~= n(a,b,c,d,e,f,g,1) then ma,mb,mc,md,me,mf,mg,mh = a,b,c,d,e,f,g,h end
+	end
+	assert(ma)
+	assert(mb)
+	assert(mc)
+	assert(md)
+	assert(me)
+	assert(mf)
+	assert(mg)
+	assert(mh)
+	maxbytes.sint64 = {ma,mb,mc,md,me,mf,mg,mh}
+end
+
+function _M.serialize.sint64(value, endianness)
+	push 'sint64'
+	local data
+	local tvalue = type(value)
+	if tvalue=='number' then
+		if value < -2^63 or value >= 2^63 or math.floor(value)~=value then
+			error("invalid value")
+		end
+		if value < 0 then value = value + 2^64 end
+		local h = value % 256
+		value = (value - h) / 256
+		local g = value % 256
+		value = (value - g) / 256
+		local f = value % 256
+		value = (value - f) / 256
+		local e = value % 256
+		value = (value - e) / 256
+		local d = value % 256
+		value = (value - d) / 256
+		local c = value % 256
+		value = (value - c) / 256
+		local b = value % 256
+		value = (value - b) / 256
+		local a = value % 256
+		if endianness=='le' then
+			data = string.char(h, g, f, e, d, c, b, a)
+		elseif endianness=='be' then
+			data = string.char(a, b, c, d, e, f, g, h)
+		else
+			error("unknown endianness")
+		end
+	elseif tvalue=='string' then
+		assert(#value==8)
+		-- sint64 as string is little-endian
+		if endianness=='le' then
+			data = value
+		elseif endianness=='be' then
+			data = value:reverse()
+		else
+			error("unknown endianness")
+		end
+	else
+		error("sint64 value must be a number or a string")
+	end
+	pop()
+	return data
+end
+
+function _M.read.sint64(stream, endianness)
+	push 'sint64'
+	local data,err = stream:getbytes(8)
+	if not data then return nil,ioerror(err) end
+	if #data < 8 then return nil,eoferror() end
+	local a,b,c,d,e,f,g,h
+	if endianness=='le' then
+		h,g,f,e,d,c,b,a = string.byte(data, 1, 8)
+	elseif endianness=='be' then
+		a,b,c,d,e,f,g,h = string.byte(data, 1, 8)
+	else
+		error("unknown endianness")
+	end
+	if a >= 128 then a = a - 256 end
+	local ma,mb,mc,md,me,mf,mg,mh = unpack(maxbytes.sint64)
+	local value
+	if math.abs(a)>ma or b>mb or c>mc or d>md or e>me or f>mf or g>mg or h>mh then
+		-- sint64 as string is little-endian
+		if endianness=='le' then
+			value = data
+		else
+			value = data:reverse()
+		end
+	else
+		value = ((((((a * 256 + b) * 256 + c) * 256 + d) * 256 + e) * 256 + f) * 256 + g) * 256 + h
+	end
+	pop()
+	return value
+end
+
+------------------------------------------------------------------------------
+
+function _M.serialize.enum(value, enum, int_t, ...)
 	push 'enum'
 	if type(int_t)~='table' or select('#', ...)>=1 then
 		int_t = {int_t, ...}
@@ -435,26 +608,26 @@ function serialize.enum(value, enum, int_t, ...)
 		ivalue = enum[value]
 	end
 	assert(ivalue, "unknown enum string '"..tostring(value).."'")
-	local serialize = assert(serialize[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
+	local serialize = assert(_M.serialize[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
 	local sdata,err = serialize(ivalue, unpack(int_t, 2))
 	if not sdata then return nil,err end
 	pop()
 	return sdata
 end
 
-function read.enum(stream, enum, int_t, ...)
+function _M.read.enum(stream, enum, int_t, ...)
 	push 'enum'
 	if type(int_t)~='table' or select('#', ...)>=1 then
 		int_t = {int_t, ...}
 	end
-	local read = assert(read[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
+	local read = assert(_M.read[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
 	local value,err = read(stream, unpack(int_t, 2))
 	if not value then
 		return nil,assert(err, "type '"..int_t[1].."' returned nil but no error")
 	end
 	local svalue = enum[value]
 	if not svalue then
-		warning("unknown enum number "..tostring(value)..(util.enum_names[enum] and (" for enum "..tostring(enum)) or "")..", keeping numerical value")
+		warning("unknown enum number "..tostring(value)..(_M.util.enum_names[enum] and (" for enum "..tostring(enum)) or "")..", keeping numerical value")
 		svalue = value
 	end
 	pop()
@@ -465,7 +638,7 @@ end
 
 if libbit then
 
-function serialize.flags(value, flagset, int_t, ...)
+function _M.serialize.flags(value, flagset, int_t, ...)
 	push 'flags'
 	if type(int_t)~='table' or select('#', ...)>=1 then
 		int_t = {int_t, ...}
@@ -480,19 +653,19 @@ function serialize.flags(value, flagset, int_t, ...)
 	else
 		value = libbit.bor(unpack(ints))
 	end
-	local serialize = assert(serialize[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
+	local serialize = assert(_M.serialize[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
 	local sdata,err = serialize(value, unpack(int_t, 2))
 	if not sdata then return nil,err end
 	pop()
 	return sdata
 end
 
-function read.flags(stream, flagset, int_t, ...)
+function _M.read.flags(stream, flagset, int_t, ...)
 	push 'flags'
 	if type(int_t)~='table' or select('#', ...)>=1 then
 		int_t = {int_t, ...}
 	end
-	local read = assert(read[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
+	local read = assert(_M.read[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
 	local int,err = read(stream, unpack(int_t, 2))
 	if not int then
 		return nil,err
@@ -512,12 +685,12 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.sizedbuffer(value, size_t, ...)
+function _M.serialize.sizedbuffer(value, size_t, ...)
 	push 'sizedbuffer'
 	if type(size_t)~='table' or select('#', ...)>=1 then
 		size_t = {size_t, ...}
 	end
-	local serialize = assert(serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+	local serialize = assert(_M.serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	local size = #value
 	local ssize,err = serialize(size, unpack(size_t, 2))
 	if not ssize then return nil,err end
@@ -525,36 +698,39 @@ function serialize.sizedbuffer(value, size_t, ...)
 	return ssize .. value
 end
 
-function read.sizedbuffer(stream, size_t, ...)
+function _M.read.sizedbuffer(stream, size_t, ...)
 	push 'sizedbuffer'
 	if type(size_t)~='table' or select('#', ...)>=1 then
 		size_t = {size_t, ...}
 	end
-	local read = assert(read[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+	local read = assert(_M.read[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	local size,err = read(stream, unpack(size_t, 2))
 	if not size then return nil,err end
 	if stream.bytelength then
-		assert(stream:bytelength() >= size, "invalid sizedbuffer size, stream is too short")
+		local length = stream:bytelength()
+		if length < size then
+			error("invalid sizedbuffer size, stream is too short ("..size.." expected, got "..length..")")
+		end
 	end
 	local value,err = stream:getbytes(size)
 	if not value then return nil,ioerror(err) end
-	if #value < size then return nil,"end of stream" end
+	if #value < size then return nil,eoferror() end
 	pop()
 	return value
 end
 
 ------------------------------------------------------------------------------
 
-function serialize.array(value, size, value_t, ...)
+function _M.serialize.array(value, size, value_t, ...)
 	push 'array'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
 	end
-	local serialize = assert(serialize[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
+	local serialize = assert(_M.serialize[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
 	if size=='*' then
 		size = #value
 	end
-	assert(size == #value, "provided array size doesn't match")
+	assert(size == #value, "provided array size doesn't match\n\t"..stackstr():gsub("\n", "\n\t"))
 	local data,temp,err = ""
 	for i=1,size do
 		temp,err = serialize(value[i], unpack(value_t, 2))
@@ -565,12 +741,12 @@ function serialize.array(value, size, value_t, ...)
 	return data
 end
 
-function write.array(stream, value, size, value_t, ...)
+function _M.write.array(stream, value, size, value_t, ...)
 	push 'array'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
 	end
-	local write = assert(write[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
+	local write = assert(_M.write[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
 	if size=='*' then
 		size = #value
 	end
@@ -583,12 +759,12 @@ function write.array(stream, value, size, value_t, ...)
 	return true
 end
 
-function read.array(stream, size, value_t, ...)
+function _M.read.array(stream, size, value_t, ...)
 	push 'array'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
 	end
-	local read = assert(read[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
+	local read = assert(_M.read[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
 	local value = {}
 	if size=='*' then
 		assert(stream.bytelength, "infinite arrays can only be read from streams with a length")
@@ -612,7 +788,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.paddedvalue(value, size_t, padding, value_t, ...)
+function _M.serialize.paddedvalue(value, size_t, padding, value_t, ...)
 	push 'paddedvalue'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
@@ -621,7 +797,7 @@ function serialize.paddedvalue(value, size_t, padding, value_t, ...)
 	local size_serialize
 	if type(size_t)=='table' then
 		assert(size_t[1], "size type definition array is empty")
-		size_serialize = assert(serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+		size_serialize = assert(_M.serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	elseif type(size_t)=='number' then
 		size_serialize = size_t
 	else
@@ -630,7 +806,7 @@ function serialize.paddedvalue(value, size_t, padding, value_t, ...)
 	assert(padding==nil or type(padding)=='string' and #padding==1, "padding should be nil or a single character")
 	assert(type(value_t)=='table', "value type definition should be an array")
 	assert(value_t[1], "value type definition array is empty")
-	local value_serialize = assert(serialize[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
+	local value_serialize = assert(_M.serialize[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
 	-- serialize value
 	local svalue,err = value_serialize(value, unpack(value_t, 2))
 	if not svalue then return nil,err end
@@ -648,6 +824,14 @@ function serialize.paddedvalue(value, size_t, padding, value_t, ...)
 			assert(size==size_serialize, "value size doesn't match sizedvalue size")
 		end
 		return svalue
+	elseif size_t.included then
+		local ssize1,err = size_serialize(size, unpack(size_t, 2))
+		if not ssize1 then return nil,err end
+		local ssize2,err = size_serialize(size + #ssize1, unpack(size_t, 2))
+		if not ssize2 then return nil,err end
+		if #ssize2 ~= #ssize1 then return nil,"included size has variable length" end
+		pop()
+		return ssize2 .. svalue
 	else
 		local ssize,err = size_serialize(size, unpack(size_t, 2))
 		if not ssize then return nil,err end
@@ -656,7 +840,7 @@ function serialize.paddedvalue(value, size_t, padding, value_t, ...)
 	end
 end
 
-function read.paddedvalue(stream, size_t, padding, value_t, ...)
+function _M.read.paddedvalue(stream, size_t, padding, value_t, ...)
 	push 'paddedvalue'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
@@ -665,7 +849,7 @@ function read.paddedvalue(stream, size_t, padding, value_t, ...)
 	local size_read
 	if type(size_t)=='table' then
 		assert(size_t[1], "size type definition array is empty")
-		size_read = assert(read[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+		size_read = assert(_M.read[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	elseif type(size_t)=='number' then
 		size_read = size_t
 	else
@@ -673,11 +857,20 @@ function read.paddedvalue(stream, size_t, padding, value_t, ...)
 	end
 	assert(type(value_t)=='table', "value type definition should be an array")
 	assert(value_t[1], "value type definition array is empty")
-	local value_read = assert(read[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
+	local value_read = assert(_M.read[value_t[1]], "unknown value type "..tostring(value_t[1]).."")
 	-- read size
 	local size,err
 	if type(size_read)=='number' then
 		size = size_read
+	elseif size_t.included then
+		size,err = size_read(stream, unpack(size_t, 2))
+		local size_serialize = assert(_M.serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+		local ssize = size_serialize(size, unpack(size_t, 2))
+		if #ssize > size then
+			return nil,"included size is too small to include itself"
+		else
+			size = size - #ssize
+		end
 	else
 		size,err = size_read(stream, unpack(size_t, 2))
 	end
@@ -687,7 +880,7 @@ function read.paddedvalue(stream, size_t, padding, value_t, ...)
 	if size > 0 then
 		svalue,err = stream:getbytes(size)
 		if not svalue then return nil,ioerror(err) end
-		if #svalue < size then return nil,"end of stream" end
+		if #svalue < size then return nil,eoferror() end
 	else
 		svalue = ""
 	end
@@ -723,23 +916,23 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.sizedvalue(value, size_t, value_t, ...)
+function _M.serialize.sizedvalue(value, size_t, value_t, ...)
     push 'sizedvalue'
-	local results = pack(serialize.paddedvalue(value, size_t, nil, value_t, ...))
+	local results = pack(_M.serialize.paddedvalue(value, size_t, nil, value_t, ...))
     pop()
     return unpack(results, 1, results.n)
 end
 
-function read.sizedvalue(stream, size_t, value_t, ...)
+function _M.read.sizedvalue(stream, size_t, value_t, ...)
     push 'sizedvalue'
-	local results = pack(read.paddedvalue(stream, size_t, nil, value_t, ...))
+	local results = pack(_M.read.paddedvalue(stream, size_t, nil, value_t, ...))
     pop()
     return unpack(results, 1, results.n)
 end
 
 ------------------------------------------------------------------------------
 
-function serialize.sizedarray(value, size_t, value_t, ...)
+function _M.serialize.sizedarray(value, size_t, value_t, ...)
 	push 'sizedarray'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
@@ -750,14 +943,14 @@ function serialize.sizedarray(value, size_t, value_t, ...)
 	assert(value_t[1], "value type definition array is empty")
 	local data,temp,err = ""
 	-- get serialization functions
-	local size_serialize = assert(serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+	local size_serialize = assert(_M.serialize[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	-- serialize size
 	local size = #value
 	temp,err = size_serialize(size, unpack(size_t, 2))
 	if not temp then return nil,err end
 	data = data .. temp
 	-- serialize array itself
-	temp,err = serialize.array(value, size, unpack(value_t))
+	temp,err = _M.serialize.array(value, size, unpack(value_t))
 	if not temp then return nil,err end
 	data = data .. temp
 	-- return size..array
@@ -765,7 +958,7 @@ function serialize.sizedarray(value, size_t, value_t, ...)
 	return data
 end
 
-function write.sizedarray(stream, value, size_t, value_t, ...)
+function _M.write.sizedarray(stream, value, size_t, value_t, ...)
 	push 'sizedarray'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
@@ -776,20 +969,20 @@ function write.sizedarray(stream, value, size_t, value_t, ...)
 	assert(value_t[1], "value type definition array is empty")
 	local success,err
 	-- get serialization functions
-	local size_write = assert(write[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+	local size_write = assert(_M.write[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	-- write size
 	local size = #value
 	success,err = size_write(stream, size, unpack(size_t, 2))
 	if not success then return nil,err end
 	-- write array itself
-	success,err = write.array(stream, value, size, unpack(value_t))
+	success,err = _M.write.array(stream, value, size, unpack(value_t))
 	if not success then return nil,err end
 	-- return success
 	pop()
 	return true
 end
 
-function read.sizedarray(stream, size_t, value_t, ...)
+function _M.read.sizedarray(stream, size_t, value_t, ...)
 	push 'sizedarray'
 	if type(value_t)~='table' or select('#', ...)>=1 then
 		value_t = {value_t, ...}
@@ -799,12 +992,12 @@ function read.sizedarray(stream, size_t, value_t, ...)
 	assert(type(value_t)=='table', "value type definition should be an array")
 	assert(value_t[1], "value type definition array is empty")
 	-- get serialization functions
-	local size_read = assert(read[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
+	local size_read = assert(_M.read[size_t[1]], "unknown size type "..tostring(size_t[1]).."")
 	-- read size
 	local size,err = size_read(stream, unpack(size_t, 2))
 	if not size then return nil,err end
 	-- read array
-	local value,err = read.array(stream, size, unpack(value_t))
+	local value,err = _M.read.array(stream, size, unpack(value_t))
 	if not value then return nil,err end
 	-- return array
 	pop()
@@ -813,18 +1006,18 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.cstring(value)
+function _M.serialize.cstring(value)
 	push 'cstring'
 	assert(not value:find('\0'), "cannot serialize a string containing embedded zeros as a C string")
 	pop()
 	return value..'\0'
 end
 
-function read.cstring(stream)
+function _M.read.cstring(stream)
 	push 'cstring'
 	local bytes = {}
 	repeat
-		local byte = read.uint8(stream)
+		local byte = _M.read.uint8(stream)
 		bytes[#bytes+1] = byte
 	until byte==0
 	pop()
@@ -835,7 +1028,7 @@ end
 
 if libstruct then
 
-function serialize.float(value, endianness)
+function _M.serialize.float(value, endianness)
 	push 'float'
 	local format
 	if endianness=='le' then
@@ -853,7 +1046,7 @@ function serialize.float(value, endianness)
 	return data
 end
 
-function read.float(stream, endianness)
+function _M.read.float(stream, endianness)
 	push 'float'
 	local format
 	if endianness=='le' then
@@ -865,7 +1058,7 @@ function read.float(stream, endianness)
 	end
 	local data,err = stream:getbytes(4)
 	if not data then return nil,ioerror(err) end
-	if #data < 4 then return nil,"end of stream" end
+	if #data < 4 then return nil,eoferror() end
 	pop()
 	return libstruct.unpack(format, data)
 end
@@ -913,7 +1106,7 @@ local function f2s_be(x)
 	return f2s_le(x):reverse()
 end
 
-function serialize.float(value, endianness)
+function _M.serialize.float(value, endianness)
 	push 'float'
 	local format
 	if endianness=='le' then
@@ -931,7 +1124,7 @@ function serialize.float(value, endianness)
 	return data
 end
 
-function read.float(stream, endianness)
+function _M.read.float(stream, endianness)
 	push 'float'
 	local format
 	if endianness=='le' then
@@ -943,7 +1136,7 @@ function read.float(stream, endianness)
 	end
 	local data,err = stream:getbytes(4)
 	if not data then return nil,ioerror(err) end
-	if #data < 4 then return nil,"end of stream" end
+	if #data < 4 then return nil,eoferror() end
 	pop()
 	return format(data)
 end
@@ -954,7 +1147,7 @@ end
 
 if libstruct then
 
-function serialize.double(value, endianness)
+function _M.serialize.double(value, endianness)
 	push 'double'
 	local format
 	if endianness=='le' then
@@ -972,7 +1165,7 @@ function serialize.double(value, endianness)
 	return data
 end
 
-function read.double(stream, endianness)
+function _M.read.double(stream, endianness)
 	push 'double'
 	local format
 	if endianness=='le' then
@@ -984,7 +1177,7 @@ function read.double(stream, endianness)
 	end
 	local data,err = stream:getbytes(8)
 	if not data then return nil,ioerror(err) end
-	if #data < 8 then return nil,"end of stream" end
+	if #data < 8 then return nil,eoferror() end
 	local value,err = libstruct.unpack(format, data)
 	if not value then return nil,err end
 	pop()
@@ -995,7 +1188,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function serialize.bytes(value, count)
+function _M.serialize.bytes(value, count)
 	push 'bytes'
 	assert(type(value)=='string', "bytes value is not a string")
 	assert(#value==count or count=='*', "byte string has not the correct length")
@@ -1003,7 +1196,7 @@ function serialize.bytes(value, count)
 	return value
 end
 
-function read.bytes(stream, count)
+function _M.read.bytes(stream, count)
 	push 'bytes'
 	if count=='*' then
 		assert(stream.bytelength, "infinite byte sequences can only be read from streams with a length")
@@ -1011,56 +1204,60 @@ function read.bytes(stream, count)
 	end
 	local data,err = stream:getbytes(count)
 	if not data then return nil,ioerror(err) end
-	if #data < count then return nil,"end of stream" end
+	if #data < count then return nil,eoferror() end
 	pop()
 	return data
 end
 
 ------------------------------------------------------------------------------
 
-function serialize.bytes2hex(value, count)
+_M.alias.char = {'bytes', 1}
+
+------------------------------------------------------------------------------
+
+function _M.serialize.bytes2hex(value, count)
 	push 'bytes2hex'
 	assert(type(value)=='string', "bytes2hex value is not a string")
-	value = util.hex2bin(value)
+	value = _M.util.hex2bin(value)
 	local err
-	value,err = serialize.bytes(value, count)
+	value,err = _M.serialize.bytes(value, count)
 	if not value then return nil,err end
 	pop()
 	return value
 end
 
-function read.bytes2hex(stream, count)
+function _M.read.bytes2hex(stream, count)
 	push 'bytes2hex'
-	local value,err = read.bytes(stream, count)
+	local value,err = _M.read.bytes(stream, count)
 	if not value then return nil,err end
 	pop()
-	return util.bin2hex(value)
+	return _M.util.bin2hex(value)
 end
 
 ------------------------------------------------------------------------------
 
-function serialize.bytes2base32(value, count)
+function _M.serialize.bytes2base32(value, count)
 	push 'bytes2base32'
 	assert(type(value)=='string', "bytes2base32 value is not a string")
-	value = util.base322bin(value)
+	value = _M.util.base322bin(value)
 	local err
-	value,err = serialize.bytes(value, count)
+	value,err = _M.serialize.bytes(value, count)
 	if not value then return nil,err end
 	pop()
 	return value
 end
 
-function read.bytes2base32(stream, count)
+function _M.read.bytes2base32(stream, count)
 	push 'bytes2base32'
-	local value,err = read.bytes(stream, count)
+	local value,err = _M.read.bytes(stream, count)
 	if not value then return nil,err end
 	pop()
-	return util.bin2base32(value)
+	return _M.util.bin2base32(value)
 end
 
 ------------------------------------------------------------------------------
 
-function serialize.boolean(value, int_t, ...)
+function _M.serialize.boolean(value, int_t, ...)
 	push 'boolean'
 	if type(int_t)~='table' or select('#', ...)>=1 then
 		int_t = {int_t, ...}
@@ -1068,19 +1265,19 @@ function serialize.boolean(value, int_t, ...)
 	if type(value)=='boolean' then
 		value = value and 1 or 0
 	end
-	local serialize = assert(serialize[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
+	local serialize = assert(_M.serialize[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
 	local sdata,err = serialize(value, unpack(int_t, 2))
 	if not sdata then return nil,err end
 	pop()
 	return sdata
 end
 
-function read.boolean(stream, int_t, ...)
+function _M.read.boolean(stream, int_t, ...)
 	push 'boolean'
 	if type(int_t)~='table' or select('#', ...)>=1 then
 		int_t = {int_t, ...}
 	end
-	local read = assert(read[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
+	local read = assert(_M.read[int_t[1]], "unknown integer type "..tostring(int_t[1]).."")
 	local value,err = read(stream, unpack(int_t, 2))
 	if not value then return nil,err end
 	local result
@@ -1096,55 +1293,46 @@ function read.boolean(stream, int_t, ...)
 	return result
 end
 
-alias.boolean8 = {'boolean', 'uint8'}
+_M.alias.boolean8 = {'boolean', 'uint8'}
 
 ------------------------------------------------------------------------------
 
-function serialize._struct(value, fields)
+function _M.serialize._struct(value, fields)
 	local data = ""
 	for _,field in ipairs(fields) do
 		local name,type = field[1],field[2]
-		local serialize = assert(serialize[type], "no function to read field of type "..tostring(type))
+		push("field "..name)
+		local serialize = assert(_M.serialize[type], "no function to serialize field of type "..tostring(type))
 		local temp,err = serialize(value[name], select(3, unpack(field)))
 		if not temp then return nil,err end
 		data = data .. temp
+		pop()
 	end
 	return data
 end
 
-function serialize.struct(value, fields)
+function _M.serialize.struct(value, fields)
 	push 'struct'
-	local data,err = serialize._struct(value, fields)
+	local data,err = _M.serialize._struct(value, fields)
 	if data==nil then return nil,err end
 	pop()
 	return data
 end
 
-function write.struct(stream, value, fields)
-	local data = ""
-	for _,field in ipairs(fields) do
-		local name,type = field[1],field[2]
-		local write = assert(write[type], "no function to read field of type "..tostring(type))
-		local success,err = write(stream, value[name], select(3, unpack(field)))
-		if not success then return nil,err end
-	end
-	return true
-end
-
-function write.struct(stream, value, fields)
+function _M.write.struct(stream, value, fields)
 	push 'struct'
-	local success,err = write._struct(stream, value, fields)
+	local success,err = _M.write._struct(stream, value, fields)
 	if not success then return nil,err end
 	pop()
 	return true
 end
 
-function read._struct(stream, fields)
+function _M.read._struct(stream, fields)
 	local object = {}
 	for _,field in ipairs(fields) do
 		local name,type = field[1],field[2]
-		push(name)
-		local read = assert(read[type], "no function to read field of type "..tostring(type))
+		push("field "..name)
+		local read = assert(_M.read[type], "no function to read field of type "..tostring(type))
 		local results = pack(read(stream, select(3, unpack(field))))
 		if results[1]==nil then
 			-- replace partial result (at position 3) with our own
@@ -1157,9 +1345,9 @@ function read._struct(stream, fields)
 	return object
 end
 
-function read.struct(stream, fields)
+function _M.read.struct(stream, fields)
 	push 'struct'
-	local results = pack(read._struct(stream, fields))
+	local results = pack(_M.read._struct(stream, fields))
 	if not results[1] then return nil,unpack(results, 2, results.n) end
 	pop()
 	return results[1]
@@ -1171,7 +1359,7 @@ local cyield = coroutine.yield
 local cwrap,unpack = coroutine.wrap,unpack
 local token = {}
 
-function serialize.fstruct(object, f, ...)
+function _M.serialize.fstruct(object, f, ...)
 	push 'fstruct'
 	local params = {n=select('#', ...), ...}
 	local str = ""
@@ -1180,18 +1368,28 @@ function serialize.fstruct(object, f, ...)
 		__newindex = object,
 		__call = function(self, field, ...)
 			if select('#', ...)>0 then
+				push("field "..field)
 				local type = ...
-				local serialize = serialize[type]
+				local serialize = _M.serialize[type]
 				if not serialize then error("no function to serialize field of type "..tostring(type)) end
 				local temp,err = serialize(object[field], select(2, ...))
-				if not temp then cyield(token, nil, err) end
+				if not temp then
+					pop()
+					cyield(token, nil, err)
+				end
+				pop()
 				str = str .. temp
 			else
 				return function(type, ...)
-					local serialize = serialize[type]
+					push("field "..field)
+					local serialize = _M.serialize[type]
 					if not serialize then error("no function to serialize field of type "..tostring(type)) end
 					local temp,err = serialize(object[field], ...)
-					if not temp then cyield(token, nil, err) end
+					if not temp then
+						pop()
+						cyield(token, nil, err)
+					end
+					pop()
 					str = str .. temp
 				end
 			end
@@ -1210,7 +1408,7 @@ function serialize.fstruct(object, f, ...)
 	return str
 end
 
-function write.fstruct(stream, object, f, ...)
+function _M.write.fstruct(stream, object, f, ...)
 	push 'fstruct'
 	local params = {n=select('#', ...), ...}
 	local wrapper = setmetatable({}, {
@@ -1218,17 +1416,27 @@ function write.fstruct(stream, object, f, ...)
 		__newindex = object,
 		__call = function(self, field, ...)
 			if select('#', ...)>0 then
+				push("field "..field)
 				local type = ...
-				local write = write[type]
+				local write = _M.write[type]
 				if not write then error("no function to write field of type "..tostring(type)) end
 				local success,err = write(stream, object[field], select(2, ...))
-				if not success then cyield(token, nil, err) end
+				if not success then
+					pop()
+					cyield(token, nil, err)
+				end
+				pop()
 			else
 				return function(type, ...)
-					local write = write[type]
+					push("field "..field)
+					local write = _M.write[type]
 					if not write then error("no function to write field of type "..tostring(type)) end
 					local success,err = write(stream, object[field], ...)
-					if not success then cyield(token, nil, err) end
+					if not success then
+						pop()
+						cyield(token, nil, err)
+					end
+					pop()
 				end
 			end
 		end,
@@ -1246,7 +1454,7 @@ function write.fstruct(stream, object, f, ...)
 	return true
 end
 
-function read.fstruct(stream, f, ...)
+function _M.read.fstruct(stream, f, ...)
 	push 'fstruct'
 	local params = {n=select('#', ...), ...}
 	local object = {}
@@ -1256,7 +1464,7 @@ function read.fstruct(stream, f, ...)
 		__call = function(self, field, ...)
 			if select('#', ...)>0 then
 				local type = ...
-				local read = read[type]
+				local read = _M.read[type]
 				if not read then error("no function to read field of type "..tostring(type)) end
 				local results = pack(read(stream, select(2, ...)))
 				if results[1]==nil then
@@ -1266,8 +1474,8 @@ function read.fstruct(stream, f, ...)
 				end
 				object[field] = results[1]
 			else
-				return --[[util.wrap("field "..field, ]]function(type, ...)
-					local read = read[type]
+				return --[[_M.util.wrap("field "..field, ]]function(type, ...)
+					local read = _M.read[type]
 					if not read then error("no function to read field of type "..tostring(type)) end
 					local results = pack(read(stream, ...))
 					if results[1]==nil then
@@ -1295,10 +1503,10 @@ end
 
 ------------------------------------------------------------------------------
 
-serialize.fields = serialize.struct
+_M.serialize.fields = _M.serialize.struct
 
-function read.fields(stream, object, fields)
-	local part,err = read.struct(stream, fields)
+function _M.read.fields(stream, object, fields)
+	local part,err = _M.read.struct(stream, fields)
 	if not part then return nil,err end
 	for k,v in pairs(part) do
 		object[k] = v
@@ -1308,8 +1516,8 @@ end
 
 ------------------------------------------------------------------------------
 
-setmetatable(serialize, {__index=function(self,k)
-	local struct = struct[k]
+setmetatable(_M.serialize, {__index=function(self,k)
+	local struct = _M.struct[k]
 	if struct then
 		local serialize = function(object)
 			return _M.serialize.struct(object, struct)
@@ -1317,7 +1525,7 @@ setmetatable(serialize, {__index=function(self,k)
 		self[k] = serialize
 		return serialize
 	end
-	local fstruct = fstruct[k]
+	local fstruct = _M.fstruct[k]
 	if fstruct then
 		local serialize = function(object, ...)
 			return _M.serialize.fstruct(object, fstruct, ...)
@@ -1325,21 +1533,35 @@ setmetatable(serialize, {__index=function(self,k)
 		self[k] = serialize
 		return serialize
 	end
-	local alias = alias[k]
+	local alias = _M.alias[k]
 	if alias then
 		assert(type(alias)=='table', "alias type definition should be an array")
 		assert(alias[1], "alias type definition array is empty")
 		local serialize = function(value)
-			local alias_serialize = assert(serialize[alias[1]], "unknown alias type "..tostring(alias[1]).."")
+			local alias_serialize = assert(_M.serialize[alias[1]], "unknown alias type "..tostring(alias[1]).."")
 			return alias_serialize(value, unpack(alias, 2))
+		end
+		self[k] = serialize
+		return serialize
+	end
+	local write = rawget(_M.write, k)
+	if write then
+		local serialize = function(...)
+			local stream = _M.buffer()
+			local written,err = write(stream, ...)
+			if not written then
+				return nil,err
+			end
+			-- :FIXME: deal with bits
+			return stream.data
 		end
 		self[k] = serialize
 		return serialize
 	end
 end})
 
-setmetatable(read, {__index=function(self,k)
-	local struct = struct[k]
+setmetatable(_M.read, {__index=function(self,k)
+	local struct = _M.struct[k]
 	if struct then
 		local read = function(stream)
 			push("struct<"..tostring(k)..">")
@@ -1351,7 +1573,7 @@ setmetatable(read, {__index=function(self,k)
 		self[k] = read
 		return read
 	end
-	local fstruct = fstruct[k]
+	local fstruct = _M.fstruct[k]
 	if fstruct then
 		local read = function(stream, ...)
 			return _M.read.fstruct(stream, fstruct, ...)
@@ -1359,12 +1581,12 @@ setmetatable(read, {__index=function(self,k)
 		self[k] = read
 		return read
 	end
-	local alias = alias[k]
+	local alias = _M.alias[k]
 	if alias then
 		assert(type(alias)=='table', "alias type definition should be an array")
 		assert(alias[1], "alias type definition array is empty")
 		local read = function(stream)
-			local alias_read = assert(read[alias[1]], "unknown alias type "..tostring(alias[1]).."")
+			local alias_read = assert(_M.read[alias[1]], "unknown alias type "..tostring(alias[1]).."")
 			return alias_read(stream, unpack(alias, 2))
 		end
 		self[k] = read
@@ -1372,8 +1594,8 @@ setmetatable(read, {__index=function(self,k)
 	end
 end})
 
-setmetatable(write, {__index=function(self,k)
-	local struct = struct[k]
+setmetatable(_M.write, {__index=function(self,k)
+	local struct = _M.struct[k]
 	if struct then
 		local write = function(stream, object)
 			push("struct<"..tostring(k)..">")
@@ -1382,33 +1604,33 @@ setmetatable(write, {__index=function(self,k)
 			pop()
 			return result
 		end
-		local wrapper = util.wrap("write."..k, write)
+		local wrapper = _M.util.wrap("write."..k, write)
 		self[k] = wrapper
 		return wrapper
 	end
-	local fstruct = fstruct[k]
+	local fstruct = _M.fstruct[k]
 	if fstruct then
 		local write = function(stream, object, ...)
 			return select(1, _M.write.fstruct(stream, object, fstruct, ...))
 		end
-		local wrapper = util.wrap("write."..k, write)
+		local wrapper = _M.util.wrap("write."..k, write)
 		self[k] = wrapper
 		return wrapper
 	end
-	local alias = alias[k]
+	local alias = _M.alias[k]
 	if alias then
 		assert(type(alias)=='table', "alias type definition should be an array")
 		assert(alias[1], "alias type definition array is empty")
 		local write = function(stream, value)
-			local write = assert(write[alias[1]], "unknown alias type "..tostring(alias[1]).."")
-			local wrapper = util.wrap("write."..alias[1], write)
+			local write = assert(_M.write[alias[1]], "unknown alias type "..tostring(alias[1]).."")
+			local wrapper = _M.util.wrap("write."..alias[1], write)
 			return select(1, wrapper(stream, value, unpack(alias, 2)))
 		end
-		local wrapper = util.wrap("write."..k, write)
+		local wrapper = _M.util.wrap("write."..k, write)
 		self[k] = wrapper
 		return wrapper
 	end
-	local serialize = serialize[k]
+	local serialize = rawget(_M.serialize, k)
 	if serialize then
 		local write = function(stream, ...)
 			local data,err = serialize(...)
@@ -1425,12 +1647,15 @@ setmetatable(write, {__index=function(self,k)
 end})
 
 -- force function instantiation for all known types
-for type in pairs(serialize) do
-	local _ = write[type]
+for type in pairs(_M.serialize) do
+	local _ = _M.write[type]
 end
-for type in pairs(struct) do
-	local _ = write[type] -- this forces write and serialize creation
-	local _ = read[type]
+for type in pairs(_M.write) do
+	local _ = _M.serialize[type]
+end
+for type in pairs(_M.struct) do
+	local _ = _M.write[type] -- this forces write and serialize creation
+	local _ = _M.read[type]
 end
 
 ------------------------------------------------------------------------------
@@ -1488,7 +1713,7 @@ end
 local buffer_methods = {}
 local buffer_mt = {__index=buffer_methods}
 
-function buffer(data, byte_endianness)
+function _M.buffer(data, byte_endianness)
 	return setmetatable({data=data or "", bits="", byte_endianness=byte_endianness}, buffer_mt)
 end
 
@@ -1519,7 +1744,7 @@ buffer_methods.bitlength = stream_methods.bitlength
 local filestream_methods = {}
 local filestream_mt = {__index=filestream_methods}
 
-function filestream(file, byte_endianness)
+function _M.filestream(file, byte_endianness)
 	-- assume the passed object behaves like a file
 --	if io.type(file)~='file' then
 --		error("bad argument #1 to filestream (file expected, got "..(io.type(file) or type(file))..")", 2)
@@ -1561,7 +1786,7 @@ filestream_methods.bitlength = stream_methods.bitlength
 local tcpstream_methods = {}
 local tcpstream_mt = {__index=tcpstream_methods}
 
-function tcpstream(socket, byte_endianness)
+function _M.tcpstream(socket, byte_endianness)
 	-- assumes the passed object behaves like a luasocket TCP socket
 --	if io.type(file)~='file' then
 --		error("bad argument #1 to filestream (file expected, got "..(io.type(file) or type(file))..")", 2)
@@ -1600,6 +1825,49 @@ end
 
 tcpstream_methods.getbits = stream_methods.getbits
 tcpstream_methods.bitlength = stream_methods.bitlength
+
+------------------------------------------------------------------------------
+
+local nbstream_methods = {}
+local nbstream_mt = {__index=nbstream_methods}
+
+function _M.nbstream(socket, byte_endianness)
+	-- assumes the passed object behaves like a nb TCP socket
+	return setmetatable({socket=socket, bits="", byte_endianness=byte_endianness}, nbstream_mt)
+end
+
+function nbstream_methods:getbytes(nbytes)
+	assert(type(nbytes)=='number')
+	local data = ""
+	while #data < nbytes do
+		local bytes,err = self.socket:read(nbytes - #data)
+		-- error
+		if not bytes and err=='aborted' then break end
+		if not bytes then return nil,err end
+		-- eof
+		if #bytes==0 then break end
+		-- accumulate bytes
+		data = data..bytes
+	end
+	return data
+end
+
+function nbstream_methods:putbytes(data)
+	assert(type(data)=='string')
+	local total = 0
+	local written,err = self.socket:write(data)
+	while written and written < #data do
+		total = total + written
+		data = data:sub(#written + 1)
+		written,err = self.socket:write(data)
+	end
+	if not written then return nil,err end
+	total = total + written
+	return total
+end
+
+nbstream_methods.getbits = stream_methods.getbits
+nbstream_methods.bitlength = stream_methods.bitlength
 
 ------------------------------------------------------------------------------
 
@@ -1759,7 +2027,7 @@ assert(_M.read.uint64(_M.buffer("\237\000\000\000\000\000\000\242"), 'be')=="\24
 
 -- enum
 
-local foo_e = util.enum{
+local foo_e = _M.util.enum{
 	bar = 1,
 	baz = 2,
 }
@@ -1806,12 +2074,29 @@ assert(value[1]==42 and value[2]==37 and next(value, next(value, next(value)))==
 
 assert(_M.read.paddedvalue(_M.buffer("\037\000\000"), 3, '\000', 'uint8')==37)
 assert(_M.read.paddedvalue(_M.buffer("\004\042\000\000\000"), {'uint8'}, '\000', 'uint8')==42)
+assert(_M.read.paddedvalue(_M.buffer("\004\042\000\000"), {'uint8', included=true}, '\000', 'uint8')==42)
+local value = _M.read.paddedvalue(_M.buffer("\002\042"), {'uint8', included=true}, '\000', {'array', 1, 'uint8'})
+assert(type(value)=='table' and #value==1 and value[1]==42 and value.__trailing_bytes==nil)
+local value = _M.read.paddedvalue(_M.buffer("\005\042\000\000\000"), {'uint8', included=true}, '\000', {'array', 1, 'uint8'})
+assert(type(value)=='table' and #value==1 and value[1]==42 and value.__trailing_bytes==nil) -- :FIXME: we lost the information of how many padding bytes we had
+local value = _M.read.paddedvalue(_M.buffer("\005\042\000\000\001"), {'uint8', included=true}, '\000', {'array', 1, 'uint8'})
+assert(type(value)=='table' and #value==1 and value[1]==42 and value.__trailing_bytes=="\000\000\001")
+local value = _M.read.paddedvalue(_M.buffer("\005\042\001\000\00"), {'uint8', included=true}, '\000', {'array', 1, 'uint8'})
+assert(type(value)=='table' and #value==1 and value[1]==42 and value.__trailing_bytes=="\001") -- :FIXME: we lost the information of how many clean padding bytes we had
+
+assert(_M.serialize.paddedvalue(37, 3, '\000', 'uint8')=="\037\000\000")
+assert(_M.serialize.paddedvalue(42, {'uint8'}, '\000', 'uint8')=="\001\042")
+assert(_M.serialize.paddedvalue(42, {'uint8', included=true}, '\000', 'uint8')=="\002\042")
+assert(_M.serialize.paddedvalue({42}, {'uint8', included=true}, '\000', {'array', 1, 'uint8'})=="\002\042")
+assert(_M.serialize.paddedvalue({42, __trailing_bytes="\000\000\000"}, {'uint8', included=true}, '\000', {'array', 1, 'uint8'})=="\005\042\000\000\000")
+assert(_M.serialize.paddedvalue({42, __trailing_bytes="\000\000\001"}, {'uint8', included=true}, '\000', {'array', 1, 'uint8'})=="\005\042\000\000\001")
 
 -- sizedvalue
 
 local value = _M.read.sizedvalue(_M.buffer("\037\000\000"), 2, 'array', '*', 'uint8')
 assert(value[1]==37 and value[2]==0 and next(value, next(value, next(value)))==nil)
 assert(_M.read.sizedvalue(_M.buffer("\000\004foobar"), {'uint16', 'be'}, 'bytes', '*')=="foob")
+assert(_M.read.sizedvalue(_M.buffer("\000\006foobar"), {'uint16', 'be', included=true}, 'bytes', '*')=="foob")
 
 -- sizedarray
 
@@ -1931,7 +2216,8 @@ end
 
 -- tcp stream
 
-if pcall(require, 'socket') then
+local socket
+if pcall(function() socket = require 'socket' end) then
 	local server,port
 	for i=1,10 do
 		port = 50000+i
@@ -1948,10 +2234,10 @@ if pcall(require, 'socket') then
 		a:send("foo")
 		assert(_M.read.cstring(in_)=="foobar")
 	else
-		print("could not test tcp streams, could not bind a server socket")
+		print("cannot test tcp streams (could not bind a server socket)")
 	end
 else
-	print("could not test tcp streams, socket module is not available")
+	print("cannot test tcp streams (optional dependency 'socket' missing)")
 end
 
 -- uint
@@ -1973,6 +2259,15 @@ if libbit then
 	assert(_M.read.uint(_M.buffer("\042\037"), 13, 'le')==2+8+32+256+1024) -- 0101010010100 100
 	assert(_M.read.uint(_M.buffer("\042\037", 'be'), 13, 'le')==4+16+64+1024) -- 0010101000100 101
 	assert(_M.read.uint(_M.buffer("\042\037", 'be'), '*', 'le')==4+16+64+1024+8192+32768) -- 0010101000100101
+
+	local t = _M.read.array(_M.buffer("\042\037"), 13, 'uint', 1) -- 0101010010100 100
+	assert(type(t)=='table')
+	assert(#t==13)
+	assert(t[1]==0)
+	assert(t[4]==1)
+	assert(t[7]==0)
+	assert(t[11]==1)
+	assert(t[13]==0)
 else
 	print("cannot test 'uint' datatype (optional dependency 'bit' missing)")
 end
@@ -1982,6 +2277,8 @@ end
 print("all tests passed successfully")
 
 end
+
+return _M
 
 --[[
 Copyright (c) 2009-2010 Jérôme Vuarand

@@ -1,8 +1,8 @@
 package = 'lunary'
 version = '${version}'
 source = {
-	url = 'http://hg.piratery.net/lunary/archive/${rev}.tar.gz',
-	dir = 'lunary-${rev}',
+	url = '${url}',
+	dir = '${dir}',
 }
 description = {
 	summary = "A binary format I/O framework for Lua.",

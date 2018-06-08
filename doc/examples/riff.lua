@@ -1,5 +1,4 @@
 local serial = require 'serial'
-local bit = require 'bit'
 
 local read = serial.read
 local write = serial.write
@@ -41,7 +40,10 @@ function read.riff_chunk(stream)
 		local data,err = read(substream)
 		if not data then return nil,err end
 		chunk.data = data
-		chunk.__trailing_bytes = substream:receive('*a')
+		local __trailing_bytes = serial.read.bytes(substream, '*')
+		if __trailing_bytes~="" then
+			chunk.__trailing_bytes = __trailing_bytes
+		end
 	end
 	return chunk
 end

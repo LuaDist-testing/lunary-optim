@@ -5,14 +5,23 @@ local file_index = "index.html"
 local file_manual = "manual.html"
 local file_examples = "examples.html"
 
+-- generate logo
+os.execute('convert -resize 384x384 logo.ps -crop 256x128+64+0 logo.png')
+
 ------------------------------------------------------------------------------
+
+local file
+
+local function output(filename)
+	file = io.open(filename, "wb")
+end
 
 function print(...)
 	local t = {...}
 	for i=1,select('#', ...) do
 		t[i] = tostring(t[i])
 	end
-	io.write(table.concat(t, '\t')..'\n')
+	file:write(table.concat(t, '\t')..'\n')
 end
 
 function header()
@@ -31,7 +40,7 @@ lang="en">
 ]])
 	print([[
 <div class="chapter" id="header">
-<img width="128" height="128" alt="Lunary" src="logo.png"/>
+<img width="256" height="128" alt="Lunary" src="logo.png"/>
 <p>A binary format I/O framework for Lua</p>
 <p class="bar">
 <a href="]]..file_index..[[">home</a> &middot;
@@ -58,7 +67,7 @@ end
 
 local chapterid = 0
 
-function chapter(title, text, sections, raw)
+function chapter(id, title, text, sections, raw)
 	chapterid = chapterid+1
 	local text = text:gsub("%%chapterid%%", tostring(chapterid))
 	if not raw then
@@ -75,7 +84,7 @@ function chapter(title, text, sections, raw)
 	end
 	print([[
 <div class="chapter">
-<h1>]]..tostring(chapterid).." - "..title..[[</h1>
+<a id="]]..id..[["/><h1>]]..tostring(chapterid).." - "..title..[[</h1>
 ]]..text..[[
 </div>
 ]])
@@ -83,11 +92,11 @@ end
 
 ------------------------------------------------------------------------------
 
-io.output(file_index)
+output(file_index)
 
 header()
 
-chapter("About Lunary", [[
+chapter('about', "About Lunary", [[
 Lunary is a framework to read and write structured binary data from and to files or network connections. The aim is to provide an easy to use interface to describe any complex binary format, and allow translation to Lua data structures. The focus is placed upon the binary side of the transformation, and further processing may be necessary to obtain the desired Lua structures. On the other hand Lunary should allow reading and writing of any binary format, and bring all the information available to the Lua side.
 
 All built-in data types preserve all the information they read from the streams. This allows reserializing an object even if it's not manipulable by Lua (e.g. an `uint64` not fitting in a Lua `number` will be represented by a `string`, an `enum` which integer value is not named will be passed as a `number`). User application or custom formats are required to remove themselves any unnecessary information (invalid value, ordering of entries in a set or a map, etc.).
@@ -110,18 +119,20 @@ Lunary is available under a [MIT-style license](LICENSE.txt).
 
 Here are some points that I'm going to improve in the near future:
 
-- add signed 64-bits integer support
-- better document errors thrown by the library
-- add a native endianness for types with endianness parameter, or a way to query the native endianness
+- better document errors thrown/returned by the library
+- complete the 'uint' and 'sint' datatypes (only reading is possible so far)
+- add a "tagged value" datatype
+- merge 'bytes' and 'sizedbuffer', 'array' and 'sizedarray'
+- add a 'deflated' datatype based on zlib
 
 ]])
 
-chapter('<a name="download">Download</a>', [[
+chapter('download', "Download", [[
 Lunary sources are available in its [Mercurial repository](http://hg.piratery.net/lunary/):
 
     hg clone http://hg.piratery.net/lunary/
 
-Tarballs of the latest code can be downloaded directly from there: as [gz](http://hg.piratery.net/lunary/archive/tip.tar.gz), [bz2](http://hg.piratery.net/lunary/archive/tip.tar.bz2) or [zip](http://hg.piratery.net/lunary/archive/tip.zip).
+Tarballs of the latest code can be downloaded directly from there: as [gz](http://hg.piratery.net/lunary/get/tip.tar.gz), [bz2](http://hg.piratery.net/lunary/get/tip.tar.bz2) or [zip](http://hg.piratery.net/lunary/get/tip.zip).
 
 Finally, I published some rockspecs. To get a full Lunary (with optional dependencies), simply run:
 
@@ -132,7 +143,7 @@ If you're on a platform without a C compiler, and no pre-built rocks are availab
     luarocks install lunary-core
 ]])
 
-chapter('<a name="installation">Installation</a>', [[
+chapter('installation', "Installation", [[
 Lunary consists of two Lua modules named `serial` and `serial.util`. There is a also an optional `serial.optim` binary module which replace some functions of `serial.util` with optimized alternatives to improve Lunary performance.
 
 A simple makefile is provided. The `build` target builds the `serial.optim` binary module. The `install` target installs all the Lunary modules to the `PREFIX` installation path, which is defined in the Makefile and can be overridden with an environment variable. The `installpure` target only install pure Lua modules, it can be used on platforms where compiling or using C modules is problematic.
@@ -148,7 +159,7 @@ footer()
 
 ------------------------------------------------------------------------------
 
-io.output(file_manual)
+output(file_manual)
 
 header()
 
@@ -278,49 +289,56 @@ local types = { {
 	doc = [[
 An 8-bit unsigned integer.
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored.]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored.]],
 }, {
 	name = 'sint8',
 	params = {},
 	doc = [[
 An 8-bit signed integer.
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored.]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored.]],
 }, {
 	name = 'uint16',
 	params = {'endianness'},
 	doc = [[
 A 16-bit unsigned integer. The `endianness` type parameters specifies the order of bytes in the stream. It is a string which can be either `'le'` for little-endian (least significant byte comes first), or `'be'` for big-endian (most significant byte comes first).
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored.]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored.]],
 }, {
 	name = 'sint16',
 	params = {'endianness'},
 	doc = [[
 A 16-bit signed integer. The `endianness` type parameters specifies the order of bytes in the stream. It is a string which can be either `'le'` for little-endian (least significant byte comes first), or `'be'` for big-endian (most significant byte comes first).
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored.]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored.]],
 }, {
 	name = 'uint32',
 	params = {'endianness'},
 	doc = [[
 A 32-bit unsigned integer. The `endianness` type parameters specifies the order of bytes in the stream. It is a string which can be either `'le'` for little-endian (least significant byte comes first), or `'be'` for big-endian (most significant byte comes first).
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored.]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored.]],
 }, {
 	name = 'sint32',
 	params = {'endianness'},
 	doc = [[
 A 32-bit signed integer. The `endianness` type parameters specifies the order of bytes in the stream. It is a string which can be either `'le'` for little-endian (least significant byte comes first), or `'be'` for big-endian (most significant byte comes first).
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored.]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored.]],
 }, {
 	name = 'uint64',
 	params = {'endianness'},
 	doc = [[
 A 64-bit unsigned integer. The `endianness` type parameters specifies the order of bytes in the stream. It is a string which can be either `'le'` for little-endian (least significant byte comes first), or `'be'` for big-endian (most significant byte comes first).
 
-In Lua it is stored as a regular `number`. When serializing, overflows and loss or precisions are ignored. When reading however, if the integer overflows the capacity of a Lua `number`, it is returned as a 8-byte string. Therefore `serialize` and `write` functions accept a string as input. When the `uint64` is a `string` on the Lua side it is always in little-endian order (ie. the string is reversed before writing or after reading if `endianness` is `'be'`).]],
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored. When reading however, if the integer overflows the capacity of a Lua `number`, it is returned as a 8-byte string. Therefore `serialize` and `write` functions accept a string as input. When the `uint64` is a `string` on the Lua side it is always in little-endian order (ie. the string is reversed before writing or after reading if `endianness` is `'be'`).]],
+}, {
+	name = 'sint64',
+	params = {'endianness'},
+	doc = [[
+A 64-bit signed integer. The `endianness` type parameters specifies the order of bytes in the stream. It is a string which can be either `'le'` for little-endian (least significant byte comes first), or `'be'` for big-endian (most significant byte comes first).
+
+In Lua it is stored as a regular `number`. When serializing, overflows and loss of precision are ignored. When reading however, if the integer overflows the capacity of a Lua `number`, it is returned as a 8-byte string. Therefore `serialize` and `write` functions accept a string as input. When the `uint64` is a `string` on the Lua side it is always in little-endian order (ie. the string is reversed before writing or after reading if `endianness` is `'be'`).]],
 }, {
 	name = 'enum',
 	params = {'dictionary', 'int_t'},
@@ -339,6 +357,11 @@ The `flags` data type is similar to the `enum` type, with several differences th
 When serializing, the Lua numbers associated with each name of the set are combined with the bit.bor function, to produce a single number, which will then be serialized according to the `int_t` type description.
 
 When reading, a single number is read according to `int_t`. Then, the data of each pair of the dictionary is tested against the number with the bit.band function, and if the result is non-zero the name if the pair is inserted in the output set. For that reason, the dictionary is a little different than in the `enum` data type case. First, it must be enumerable using the standard `pairs` Lua functions. It should thus be a Lua table, unless the `pairs` global is overridden. Second, only one direction of mapping is necessary, ie. the pairs with the name as key and the data as value. This also means that several names can have the same values. If that is the case, all the matching names will be present in the output set.]],
+}, {
+	name = 'char',
+	params = {},
+	doc = [[
+This is a simple 1 byte value. The data is a `string` in Lua. When serializing or writing, the string passed should have a length of 1 otherwise an error is thrown.]],
 }, {
 	name = 'bytes',
 	params = {'count'},
@@ -510,6 +533,22 @@ As you can see, we used the name `self` for both the `value` and `declare_field`
 } }
 
 manual = markdown(manual)
+manual = manual..[[
+<ul>
+]]
+for itype,type in ipairs(types) do
+	local pstr = table.concat(type.params, ", ")
+	if pstr~="" then
+		pstr = " ( "..pstr.." )"
+	end
+	manual = manual..[[
+	<li><a href="#]]..type.name..[["/>]]..type.name..pstr..[[</a></li>
+]]
+end
+manual = manual..[[
+</ul>
+]]
+
 for itype,type in ipairs(types) do
 	local pstr = table.concat(type.params, ", ")
 	if pstr~="" then
@@ -517,24 +556,24 @@ for itype,type in ipairs(types) do
 	end
 	manual = manual..[[
 	<div class="function">
-	<h3><a name="]]..type.name..[["><code>]]..type.name..pstr..[[</code></a></h3>
+	<a id="]]..type.name..[["/><h3><code>]]..type.name..pstr..[[</code></h3>
 ]]..markdown(type.doc)..[[
 
 		</div>
 ]]
 end
 
-chapter('<a name="manual">Manual</a>', manual, nil, true)
+chapter('manual', "Manual", manual, nil, true)
 
 footer()
 
 ------------------------------------------------------------------------------
 
-io.output(file_examples)
+output(file_examples)
 
 header()
 
-chapter('<a name="examples">Examples</a>', [[
+chapter('examples', "Examples", [[
 Here are some examples file descriptions using Lunary.
 
 ---

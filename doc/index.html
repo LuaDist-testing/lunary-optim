@@ -11,7 +11,7 @@ lang="en">
 <body>
 
 <div class="chapter" id="header">
-<img width="128" height="128" alt="Lunary" src="logo.png"/>
+<img width="256" height="128" alt="Lunary" src="logo.png"/>
 <p>A binary format I/O framework for Lua</p>
 <p class="bar">
 <a href="index.html">home</a> &middot;
@@ -23,7 +23,7 @@ lang="en">
 </div>
 
 <div class="chapter">
-<h1>1 - About Lunary</h1>
+<a id="about"/><h1>1 - About Lunary</h1>
 
 <p>Lunary is a framework to read and write structured binary data from and to files or network connections. The aim is to provide an easy to use interface to describe any complex binary format, and allow translation to Lua data structures. The focus is placed upon the binary side of the transformation, and further processing may be necessary to obtain the desired Lua structures. On the other hand Lunary should allow reading and writing of any binary format, and bring all the information available to the Lua side.</p>
 
@@ -48,23 +48,25 @@ lang="en">
 <p>Here are some points that I'm going to improve in the near future:</p>
 
 <ul>
-    <li>add signed 64-bits integer support</li>
-    <li>better document errors thrown by the library</li>
-    <li>add a native endianness for types with endianness parameter, or a way to query the native endianness</li>
+    <li>better document errors thrown/returned by the library</li>
+    <li>complete the 'uint' and 'sint' datatypes (only reading is possible so far)</li>
+    <li>add a "tagged value" datatype</li>
+    <li>merge 'bytes' and 'sizedbuffer', 'array' and 'sizedarray'</li>
+    <li>add a 'deflated' datatype based on zlib</li>
 </ul>
 
 
 </div>
 
 <div class="chapter">
-<h1>2 - <a name="download">Download</a></h1>
+<a id="download"/><h1>2 - Download</h1>
 
 <p>Lunary sources are available in its <a href="http://hg.piratery.net/lunary/">Mercurial repository</a>:</p>
 
 <pre><code>hg clone http://hg.piratery.net/lunary/
 </code></pre>
 
-<p>Tarballs of the latest code can be downloaded directly from there: as <a href="http://hg.piratery.net/lunary/archive/tip.tar.gz">gz</a>, <a href="http://hg.piratery.net/lunary/archive/tip.tar.bz2">bz2</a> or <a href="http://hg.piratery.net/lunary/archive/tip.zip">zip</a>.</p>
+<p>Tarballs of the latest code can be downloaded directly from there: as <a href="http://hg.piratery.net/lunary/get/tip.tar.gz">gz</a>, <a href="http://hg.piratery.net/lunary/get/tip.tar.bz2">bz2</a> or <a href="http://hg.piratery.net/lunary/get/tip.zip">zip</a>.</p>
 
 <p>Finally, I published some rockspecs. To get a full Lunary (with optional dependencies), simply run:</p>
 
@@ -79,7 +81,7 @@ lang="en">
 </div>
 
 <div class="chapter">
-<h1>3 - <a name="installation">Installation</a></h1>
+<a id="installation"/><h1>3 - Installation</h1>
 
 <p>Lunary consists of two Lua modules named <code>serial</code> and <code>serial.util</code>. There is a also an optional <code>serial.optim</code> binary module which replace some functions of <code>serial.util</code> with optimized alternatives to improve Lunary performance.</p>
 
@@ -96,7 +98,7 @@ lang="en">
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2010-10-09 21:35:09 CEST</small>
+<small>Last update: 2012-11-06 20:34:52 GMT</small>
 </div>
 
 </body>

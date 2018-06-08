@@ -1,5 +1,6 @@
 #include <lua.h>
 #include <lauxlib.h>
+#include "../compat.h"
 
 typedef unsigned char byte;
 #define BUFFERSIZE 256
@@ -226,8 +227,9 @@ static luaL_Reg functions[] = {
 
 LUAMOD_API int luaopen_module(lua_State* L)
 {
-	luaL_register(L, lua_tostring(L, 1), functions);
-	return 0;
+	lua_newtable(L);
+	setfuncs(L, functions, 0);
+	return 1;
 }
 
 /*

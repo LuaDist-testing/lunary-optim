@@ -37,6 +37,7 @@
 /HOLECOLOR	{1.0 setgray} bind def
 /ORBITCOLOR	{0.5 setgray} bind def
 /LOGOFONT	{/Helvetica 0.90} def
+/LOGO2FONT	{/Helvetica 0.17} def
 /LABELFONT	{/Helvetica 0.36} def
 
 %------------------------------------------------------------------------------
@@ -45,8 +46,9 @@
 /LOGOCOLOR	{HOLECOLOR} bind def
 /LABELCOLOR	{ORBITCOLOR} bind def
 
-/LABELANGLE	125 def
+/LABELANGLE	90 def
 /LOGO		(Lua) def
+/LOGO2		(Lunary) def
 
 /DASHANGLE	10 def
 /HALFDASHANGLE	DASHANGLE 2 div def
@@ -81,6 +83,14 @@ F
 LOGO stringwidth pop 2 div neg
 -0.5 moveto
 LOGO show
+
+%--------------------------------------------------------------------- logo2 --
+%LOGOCOLOR
+%LOGO2FONT
+%F
+%LOGO2 stringwidth pop 2 div neg 1 add
+%0.93 moveto
+%LOGO2 show
 
 %------------------------------------------------------------------------------
 % based on code from Blue Book Program 10, on pages 167--169

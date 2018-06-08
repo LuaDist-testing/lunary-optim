@@ -1,8 +1,17 @@
+local pathlib = require 'blake.path'
+local E = pathlib.empty
+
 return {
 	type = 'lua_binary_module';
 	files = {
-		dirs={source="serial", build="serial"},
-		"optim.c",
+		{
+			dirs={source="serial", build="serial"},
+			"optim.c",
+		},
+		{
+			dirs={source=E},
+			"compat.c",
+		},
 	};
 }
 

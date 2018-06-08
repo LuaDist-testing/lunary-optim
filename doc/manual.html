@@ -11,7 +11,7 @@ lang="en">
 <body>
 
 <div class="chapter" id="header">
-<img width="128" height="128" alt="Lunary" src="logo.png"/>
+<img width="256" height="128" alt="Lunary" src="logo.png"/>
 <p>A binary format I/O framework for Lua</p>
 <p class="bar">
 <a href="index.html">home</a> &middot;
@@ -23,7 +23,7 @@ lang="en">
 </div>
 
 <div class="chapter">
-<h1>4 - <a name="manual">Manual</a></h1>
+<a id="manual"/><h1>4 - Manual</h1>
 
 
 <h2>4.1 - General library description</h2>
@@ -154,64 +154,98 @@ serial.read.struct(stream, attribute)
 
 <p>Here is a description of the built-in data types provided with Lunary. Some of these types take type descriptors as parameter (as described above). They are usually denoted with a <code>_t</code> suffix in the parameter name.</p>
 
+<ul>
+	<li><a href="#uint8"/>uint8</a></li>
+	<li><a href="#sint8"/>sint8</a></li>
+	<li><a href="#uint16"/>uint16 ( endianness )</a></li>
+	<li><a href="#sint16"/>sint16 ( endianness )</a></li>
+	<li><a href="#uint32"/>uint32 ( endianness )</a></li>
+	<li><a href="#sint32"/>sint32 ( endianness )</a></li>
+	<li><a href="#uint64"/>uint64 ( endianness )</a></li>
+	<li><a href="#sint64"/>sint64 ( endianness )</a></li>
+	<li><a href="#enum"/>enum ( dictionary, int_t )</a></li>
+	<li><a href="#flags"/>flags ( dictionary, int_t )</a></li>
+	<li><a href="#char"/>char</a></li>
+	<li><a href="#bytes"/>bytes ( count )</a></li>
+	<li><a href="#sizedbuffer"/>sizedbuffer ( size_t )</a></li>
+	<li><a href="#array"/>array ( size, value_t )</a></li>
+	<li><a href="#sizedarray"/>sizedarray ( size_t, value_t )</a></li>
+	<li><a href="#sizedvalue"/>sizedvalue ( size_t, value_t )</a></li>
+	<li><a href="#cstring"/>cstring</a></li>
+	<li><a href="#float"/>float ( endianness )</a></li>
+	<li><a href="#double"/>double ( endianness )</a></li>
+	<li><a href="#bytes2hex"/>bytes2hex ( count )</a></li>
+	<li><a href="#bytes2base32"/>bytes2base32 ( count )</a></li>
+	<li><a href="#boolean"/>boolean ( int_t )</a></li>
+	<li><a href="#struct"/>struct ( fields )</a></li>
+	<li><a href="#fstruct"/>fstruct ( f, ... )</a></li>
+</ul>
 	<div class="function">
-	<h3><a name="uint8"><code>uint8</code></a></h3>
+	<a id="uint8"/><h3><code>uint8</code></h3>
 
 <p>An 8-bit unsigned integer.</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored.</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="sint8"><code>sint8</code></a></h3>
+	<a id="sint8"/><h3><code>sint8</code></h3>
 
 <p>An 8-bit signed integer.</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored.</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="uint16"><code>uint16 ( endianness )</code></a></h3>
+	<a id="uint16"/><h3><code>uint16 ( endianness )</code></h3>
 
 <p>A 16-bit unsigned integer. The <code>endianness</code> type parameters specifies the order of bytes in the stream. It is a string which can be either <code>'le'</code> for little-endian (least significant byte comes first), or <code>'be'</code> for big-endian (most significant byte comes first).</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored.</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="sint16"><code>sint16 ( endianness )</code></a></h3>
+	<a id="sint16"/><h3><code>sint16 ( endianness )</code></h3>
 
 <p>A 16-bit signed integer. The <code>endianness</code> type parameters specifies the order of bytes in the stream. It is a string which can be either <code>'le'</code> for little-endian (least significant byte comes first), or <code>'be'</code> for big-endian (most significant byte comes first).</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored.</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="uint32"><code>uint32 ( endianness )</code></a></h3>
+	<a id="uint32"/><h3><code>uint32 ( endianness )</code></h3>
 
 <p>A 32-bit unsigned integer. The <code>endianness</code> type parameters specifies the order of bytes in the stream. It is a string which can be either <code>'le'</code> for little-endian (least significant byte comes first), or <code>'be'</code> for big-endian (most significant byte comes first).</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored.</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="sint32"><code>sint32 ( endianness )</code></a></h3>
+	<a id="sint32"/><h3><code>sint32 ( endianness )</code></h3>
 
 <p>A 32-bit signed integer. The <code>endianness</code> type parameters specifies the order of bytes in the stream. It is a string which can be either <code>'le'</code> for little-endian (least significant byte comes first), or <code>'be'</code> for big-endian (most significant byte comes first).</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored.</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="uint64"><code>uint64 ( endianness )</code></a></h3>
+	<a id="uint64"/><h3><code>uint64 ( endianness )</code></h3>
 
 <p>A 64-bit unsigned integer. The <code>endianness</code> type parameters specifies the order of bytes in the stream. It is a string which can be either <code>'le'</code> for little-endian (least significant byte comes first), or <code>'be'</code> for big-endian (most significant byte comes first).</p>
 
-<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss or precisions are ignored. When reading however, if the integer overflows the capacity of a Lua <code>number</code>, it is returned as a 8-byte string. Therefore <code>serialize</code> and <code>write</code> functions accept a string as input. When the <code>uint64</code> is a <code>string</code> on the Lua side it is always in little-endian order (ie. the string is reversed before writing or after reading if <code>endianness</code> is <code>'be'</code>).</p>
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored. When reading however, if the integer overflows the capacity of a Lua <code>number</code>, it is returned as a 8-byte string. Therefore <code>serialize</code> and <code>write</code> functions accept a string as input. When the <code>uint64</code> is a <code>string</code> on the Lua side it is always in little-endian order (ie. the string is reversed before writing or after reading if <code>endianness</code> is <code>'be'</code>).</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="enum"><code>enum ( dictionary, int_t )</code></a></h3>
+	<a id="sint64"/><h3><code>sint64 ( endianness )</code></h3>
+
+<p>A 64-bit signed integer. The <code>endianness</code> type parameters specifies the order of bytes in the stream. It is a string which can be either <code>'le'</code> for little-endian (least significant byte comes first), or <code>'be'</code> for big-endian (most significant byte comes first).</p>
+
+<p>In Lua it is stored as a regular <code>number</code>. When serializing, overflows and loss of precision are ignored. When reading however, if the integer overflows the capacity of a Lua <code>number</code>, it is returned as a 8-byte string. Therefore <code>serialize</code> and <code>write</code> functions accept a string as input. When the <code>uint64</code> is a <code>string</code> on the Lua side it is always in little-endian order (ie. the string is reversed before writing or after reading if <code>endianness</code> is <code>'be'</code>).</p>
+
+		</div>
+	<div class="function">
+	<a id="enum"/><h3><code>enum ( dictionary, int_t )</code></h3>
 
 <p>The <code>enum</code> data type is similar to the C enum types. Its first type parameter, <code>dictionary</code>, is a mapping between names and data (typically number values). It should be a Lua indexable type, like a <code>table</code>, with two key-value pairs for each mapping, one with the name as a key and the data as value, and one with the data as key and the name as value. This implies that a name has a single associated data and a given data has a single name.</p>
 
@@ -221,7 +255,7 @@ serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="flags"><code>flags ( dictionary, int_t )</code></a></h3>
+	<a id="flags"/><h3><code>flags ( dictionary, int_t )</code></h3>
 
 <p>The <code>flags</code> data type is similar to the <code>enum</code> type, with several differences though. This data type represents the combination of several names. Instead of a single name <code>string</code>, the Lua side will manipulate a set of names, represented by a <code>table</code> with names as keys, and <code>true</code> as the associated value. On the stream side however all the data associated with the names of the set are combined. To do so, the data must be integers, and they will be combined with the help of the <a href="http://bitop.luajit.org/">BitOp library</a>. For that reason, the <code>int_t</code> type description has to serialize Lua numbers.</p>
 
@@ -231,7 +265,13 @@ serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="bytes"><code>bytes ( count )</code></a></h3>
+	<a id="char"/><h3><code>char</code></h3>
+
+<p>This is a simple 1 byte value. The data is a <code>string</code> in Lua. When serializing or writing, the string passed should have a length of 1 otherwise an error is thrown.</p>
+
+		</div>
+	<div class="function">
+	<a id="bytes"/><h3><code>bytes ( count )</code></h3>
 
 <p>This is a simple constant-size byte sequence. The size is passed in the <code>count</code> type parameter. The data is a <code>string</code> in Lua. When serializing or writing, the string passed should have the proper length otherwise an error is thrown.</p>
 
@@ -239,13 +279,13 @@ serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="sizedbuffer"><code>sizedbuffer ( size_t )</code></a></h3>
+	<a id="sizedbuffer"/><h3><code>sizedbuffer ( size_t )</code></h3>
 
 <p>This is a simple byte buffer prefixed with a size. The size is serialized by the <code>size_t</code> type description. On the Lua side the buffer is a <code>string</code>, and its size is available through the Lua <code>#</code> operator. This type is similar to a <code>sizedarray</code> with a <code>value_t</code> of <code>uint8</code>, except that the array is not unpacked in a Lua array, it stays a Lua string. This is useful to store strings with embedded zeros.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="array"><code>array ( size, value_t )</code></a></h3>
+	<a id="array"/><h3><code>array ( size, value_t )</code></h3>
 
 <p>The array data type is a fixed size array of values. The size of the array is the first type parameter. As such it is not stored in the stream. The values are passed as a Lua array, which is expected to be of the right size when serializing or writing. The values are serialized according to the <code>value_t</code> type descriptor.</p>
 
@@ -255,13 +295,13 @@ serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="sizedarray"><code>sizedarray ( size_t, value_t )</code></a></h3>
+	<a id="sizedarray"/><h3><code>sizedarray ( size_t, value_t )</code></h3>
 
 <p>A <code>sizedarray</code> is an array with its size stored in the stream before it, so it can be read efficiently and at any position inside the stream. The size comes first in the stream, described by <code>size_t</code>. Then follows a sequence of elements of that size, each element being described by <code>value_t</code>.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="sizedvalue"><code>sizedvalue ( size_t, value_t )</code></a></h3>
+	<a id="sizedvalue"/><h3><code>sizedvalue ( size_t, value_t )</code></h3>
 
 <p>This data type has two modes, depending on the <code>size_t</code> type parameter.</p>
 
@@ -275,31 +315,31 @@ serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="cstring"><code>cstring</code></a></h3>
+	<a id="cstring"/><h3><code>cstring</code></h3>
 
 <p>A <code>cstring</code> stores a Lua string unmodified, terminated by a null byte. Since no other size information is stored in the stream or provided as a type parameter, the serialized string cannot contain embedded null bytes. This type is useful to store text strings.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="float"><code>float ( endianness )</code></a></h3>
+	<a id="float"/><h3><code>float ( endianness )</code></h3>
 
 <p>This data type stores a 32 bits floating point number, using the <a href="http://www.inf.puc-rio.br/~roberto/struct/">struct library</a>. The type is therefore only available if the library is available. Like integer types, the <code>endianness</code> type parameters specifies the byte order in the stream: <code>'le'</code> stands for little-endian (least significant byte comes first), and <code>'be'</code> stands for big-endian (most significant byte comes first). A Lua number is simply serialized using the struct library type format <code>"&lt;f"</code> in little-endian mode, and <code>"&gt;f"</code> in big-endian mode.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="double"><code>double ( endianness )</code></a></h3>
+	<a id="double"/><h3><code>double ( endianness )</code></h3>
 
 <p>This data type stores a 64 bits floating point number, using the <a href="http://www.inf.puc-rio.br/~roberto/struct/">struct library</a>. The type is therefore only available if the library is available. Like integer types, the <code>endianness</code> type parameters specifies the byte order in the stream: <code>'le'</code> stands for little-endian (least significant byte comes first), and <code>'be'</code> stands for big-endian (most significant byte comes first). A Lua number is simply serialized using the struct library type format <code>"&lt;d"</code> in little-endian mode, and <code>"&gt;d"</code> in big-endian mode.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="bytes2hex"><code>bytes2hex ( count )</code></a></h3>
+	<a id="bytes2hex"/><h3><code>bytes2hex ( count )</code></h3>
 
 <p>This data type represents a sequence of 4-bits numbers concatenated in a byte string. Each byte contains two 4-bit numbers. Within the bytes bits are considered to be in the big-endian order. It means the most significant 4 bits of the byte contain the first number of the byte. Each number is converted to an hexadecimal number.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="bytes2base32"><code>bytes2base32 ( count )</code></a></h3>
+	<a id="bytes2base32"/><h3><code>bytes2base32 ( count )</code></h3>
 
 <p>This data type represents a sequence of 5-bits numbers concatenated in a byte string. Each group of height 5-bits number spans over five bytes. Each byte contains bits for two to three 5-bit numbers. Within the bytes bits are considered to be in the big-endian order. It means that when a number spans two bytes, its most significant bits are the least significant bits of the first byte, and its least significant bits are the most significant bits of the second byte.</p>
 
@@ -351,13 +391,13 @@ serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="boolean"><code>boolean ( int_t )</code></a></h3>
+	<a id="boolean"/><h3><code>boolean ( int_t )</code></h3>
 
 <p>This type stores a boolean value in an integer. The integer type is described by <code>int_t</code>. The integer is 1 for <code>true</code>, 0 for <code>false</code>. When reading, if the integer is neither 1 nor 0, it is returned as is, as a Lua <code>number</code>. Therefore for symmetry it is possible to pass a <code>number</code> when serializing a <code>boolean</code>.</p>
 
 		</div>
 	<div class="function">
-	<h3><a name="struct"><code>struct ( fields )</code></a></h3>
+	<a id="struct"/><h3><code>struct ( fields )</code></h3>
 
 <p>The <code>struct</code> data type can describe complex compound data types, like C structs. Like C structs, it is described by a sequence of named fields. The <code>fields</code> type parameter is an array, each element defining a field with a sub-array. This sub-array first element is the field name, the second element is the field type, and all subsequent elements are the type parameters. For example, here is the description of a <code>struct</code> with two fields, a <code>cstring</code> name and an <code>uint32</code> value:</p>
 
@@ -371,7 +411,7 @@ return serial.read.struct(stream, attribute)
 
 		</div>
 	<div class="function">
-	<h3><a name="fstruct"><code>fstruct ( f, ... )</code></a></h3>
+	<a id="fstruct"/><h3><code>fstruct ( f, ... )</code></h3>
 
 <p>The <code>fstruct</code>, a shortcut for <em>function-struct</em>, is the most complex data type provided by Lunary. When a data type is too complex to be described by any predefined data type, or a compound of them assembled with the <code>struct</code> data type, you usually have to provide low level serialization functions. This means you have to write a <code>read</code> function and either a <code>write</code> or a <code>serialize</code> function. However for many data types, there is some redundancy between the read and the write parts.</p>
 
@@ -421,7 +461,7 @@ return serial.read.fstruct(stream, attribute)
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2010-10-09 21:35:10 CEST</small>
+<small>Last update: 2012-11-06 20:33:19 GMT</small>
 </div>
 
 </body>

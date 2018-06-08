@@ -1,5 +1,11 @@
 local serial = require 'serial'
-local bit = require 'bit'
+serial.util = require 'serial.util'
+local bit
+if _VERSION=="Lua 5.2" then
+	bit = require 'bit32'
+else
+	bit = require 'bit'
+end
 
 local read = serial.read
 local write = serial.write
@@ -45,7 +51,10 @@ end
 -- Return the CRC of the bytes buf[0..len-1].
 local function crc(buf)
 	local value = bit.bxor(update_crc(0xffffffff, buf), 0xffffffff)
-	return serial.serialize.sint32(value, 'be') -- sint32 because bit lib defaults to that
+	if value < 0 then -- luabitop (but not 5.2's bit32) returns sint32
+		value = value + 2^32
+	end
+	return serial.serialize.uint32(value, 'be')
 end
 
 ------------------------------------------------------------------------------

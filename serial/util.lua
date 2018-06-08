@@ -1,4 +1,4 @@
-module((...), package.seeall)
+local _M = {}
 
 local debug = false
 
@@ -18,24 +18,24 @@ local schar = string.char
 local mfloor = math.floor
 local tonumber = tonumber
 
-enum_names = {}
+_M.enum_names = {}
 
-function enum(name2value, name)
+function _M.enum(name2value, name)
 	local self = {}
 	for k,v in pairs(name2value) do
 		self[k] = v
 		self[v] = k
 	end
 	if name then
-		enum_names[name] = self
+		_M.enum_names[name] = self
 	end
 	return self
 end
 
 if optim and optim.bin2hex then
-	bin2hex = optim.bin2hex
+	_M.bin2hex = optim.bin2hex
 else
-	function bin2hex(bin)
+	function _M.bin2hex(bin)
 		local hex = {}
 		bin = {bin:byte(1,#bin)}
 		for i=1,#bin do
@@ -46,9 +46,9 @@ else
 end
 
 if optim and optim.hex2bin then
-	hex2bin = optim.hex2bin
+	_M.hex2bin = optim.hex2bin
 else
-	function hex2bin(hex)
+	function _M.hex2bin(hex)
 		local bin = {}
 		for i=1,#hex/2 do
 			tinsert(bin, schar(tonumber("0X"..hex:sub(2*i-1, 2*i))))
@@ -178,18 +178,18 @@ local function base322hex(str)
 end
 
 if optim and optim.base322bin then
-	base322bin = optim.base322bin
+	_M.base322bin = optim.base322bin
 else
-	function base322bin(value)
-		return hex2bin(base322hex(value))
+	function _M.base322bin(value)
+		return _M.hex2bin(base322hex(value))
 	end
 end
 
 if optim and optim.bin2base32 then
-	bin2base32 = optim.bin2base32
+	_M.bin2base32 = optim.bin2base32
 else
-	function bin2base32(value)
-		return hex2base32(bin2hex(value))
+	function _M.bin2base32(value)
+		return hex2base32(_M.bin2hex(value))
 	end
 end
 
@@ -208,7 +208,7 @@ function wrap(name)
 end
 --]=]
 if debug then
-	function wrap(name, f)
+	function _M.wrap(name, f)
 		local ename = name:gsub("[^%w]", "_")
 		local chunk = assert(loadstring([[
 			local ]]..ename..[[ = ...
@@ -222,10 +222,12 @@ if debug then
 		return chunk(f)
 	end
 else
-	function wrap(name, f)
+	function _M.wrap(name, f)
 		return f
 	end
 end
+
+return _M
 
 --[[
 Copyright (c) 2009 Jérôme Vuarand
