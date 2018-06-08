@@ -27,13 +27,13 @@ lang="en">
 
 <p>Lunary is a framework to read and write structured binary data from and to files or network connections. The aim is to provide an easy to use interface to describe any complex binary format, and allow translation to Lua data structures. The focus is placed upon the binary side of the transformation, and further processing may be necessary to obtain the desired Lua structures. On the other hand Lunary should allow reading and writing of any binary format, and bring all the information available to the Lua side.</p>
 
-<p>All built-in data types preserve all the information they read from the streams. This allows reserializing an object even if it's not manipulable by Lua (e.g. an <code>uint64</code> not fitting in a Lua <code>number</code> will be represented by a <code>string</code>, an <code>enum</code> which integer value is not named will be passed as a <code>number</code>). User application or custom formats are required to remove themselves any unnecessary information (invalid value, ordering of entries in a set or a map, etc.).</p>
+<p>All built-in data types preserve all the information they read from the streams. This allows reserializing an object even if it's not manipulable by Lua (e.g. an <code>uint64</code> not fitting in a Lua <code>number</code> will be represented by a <code>string</code>, an <code>enum</code> which integer value is not named will be passed as a <code>number</code>).</p>
 
-<p>Lunary name is based on the contraction of Lua and binary, and it sounds moon-themed (it is close to the lunar adjective).</p>
+<p>The Lunary name is based on the contraction of Lua and binary, and it sounds moon-themed (it is close to the lunar adjective).</p>
 
 <h2>Support</h2>
 
-<p>All support is done through the <a href="http://www.lua.org/lua-l.html">Lua mailing list</a>. If the traffic becomes too important a specialized mailing list will be created.</p>
+<p>All support is done through the <a href="http://www.lua.org/lua-l.html">Lua mailing list</a>.</p>
 
 <p>Feel free to ask for further developments, especially new data types. I can't guarantee that I'll develop everything you ask, but I want my code to be as useful as possible, so I'll do my best to help you. You can also send me request or bug reports (for code and documentation) directly at <a href="mailto:jerome.vuarand@gmail.com">jerome.vuarand@gmail.com</a>.</p>
 
@@ -49,9 +49,6 @@ lang="en">
 
 <ul>
     <li>better document errors thrown/returned by the library</li>
-    <li>complete the 'uint' and 'sint' datatypes (only reading is possible so far)</li>
-    <li>add a "tagged value" datatype</li>
-    <li>merge 'bytes' and 'sizedbuffer', 'array' and 'sizedarray'</li>
     <li>add a 'deflated' datatype based on zlib</li>
 </ul>
 
@@ -90,15 +87,15 @@ lang="en">
 <p>Finally note that Lunary has some optional dependencies. If the dependency is not available, the data types using them will not be available to Lunary users. Here are the data types with dependencies:</p>
 
 <ul>
-    <li>the <code>float</code> and <code>double</code> data types uses <a href="http://www.inf.puc-rio.br/~roberto/struct/">Roberto Ierusalimschy's struct library</a> to serialize native floating point numbers. The library is available at <a href="http://www.inf.puc-rio.br/~roberto/struct/">http://www.inf.puc-rio.br/~roberto/struct/</a>.</li>
-    <li>the <code>flags</code> data type uses the <a href="http://bitop.luajit.org/">BitOp library</a> for bit-wise boolean operations. The library is available at <a href="http://bitop.luajit.org/">http://bitop.luajit.org/</a>.</li>
+    <li>The <code>double</code> data type uses <a href="http://www.inf.puc-rio.br/~roberto/struct/">Roberto Ierusalimschy's struct library</a> to serialize native floating point numbers. The library is available at <a href="http://www.inf.puc-rio.br/~roberto/struct/">http://www.inf.puc-rio.br/~roberto/struct/</a>.</li>
+    <li>The <code>flags</code> data type use the <a href="http://bitop.luajit.org/">BitOp library</a> for bit-wise boolean operations on Lua 5.1. The library is available at <a href="http://bitop.luajit.org/">http://bitop.luajit.org/</a>. On Lua 5.2 the standard <code>bit32</code> library will be used.</li>
 </ul>
 
 <p>Note than many other libraries have similar functionality. I wouldn't mind adding support for some of these, just ask.</p>
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2012-11-06 20:34:52 GMT</small>
+<small>Last update: 2012-12-07 23:41:33 GMT</small>
 </div>
 
 </body>

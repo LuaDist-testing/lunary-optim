@@ -1,16 +1,16 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = 'lunary-optim'
-version = '20121108-1'
+version = '20121212-1'
 -- LuaDist source
 source = {
-  tag = "20121108-1",
+  tag = "20121212-1",
   url = "git://github.com/LuaDist-testing/lunary-optim.git"
 }
 -- Original source
 -- source = {
--- 	url = 'http://hg.piratery.net/lunary/get/e7a3ad8efa5f86f8621c0ffcc7e57ee6e6dd8e1f.tar.gz',
--- 	dir = 'doub-lunary-e7a3ad8efa5f',
+-- 	url = 'http://hg.piratery.net/lunary/get/20d192874d252c12fb2b003a696aeec88c8a69b8.tar.gz',
+-- 	dir = 'doub-lunary-20d192874d25',
 -- }
 description = {
 	summary = "Optimizations for Lunary.",
@@ -20,13 +20,13 @@ description = {
 }
 dependencies = {
 	'lua ~> 5.1',
-	'lunary-core 20121108-1',
+	'lunary-core 20121212-1',
 }
 build = {
 	type = 'builtin',
 	modules = {
 		['serial.optim'] = {
-			sources = { 'serial/optim.c' },
+			sources = { 'serial/optim.c', 'compat.c' },
 			defines = {
 				'LUAMOD_API=LUALIB_API',
 				'luaopen_module=luaopen_serial_optim',

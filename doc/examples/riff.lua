@@ -26,7 +26,7 @@ alias.riff_file = {'array', '*', 'riff_chunk'}
 
 function fstruct.riff_chunk_raw(self)
 	self 'type' ('fourcc')
-	self 'data' ('sizedbuffer', 'uint32', 'le')
+	self 'data' ('bytes', 'uint32', 'le')
 	if (#self.data % 2) ~= 0 then
 		self 'pad_byte' ('uint8')
 	end
@@ -203,7 +203,7 @@ struct.riff_slnt_chunk = {
 }
 
 struct.riff_cue_chunk = {
-	{'cue_points', 'sizedarray', {'uint32', 'le'}, 'riff_cue_point'},
+	{'cue_points', 'array', {'uint32', 'le'}, 'riff_cue_point'},
 }
 
 struct.cue_point = {
@@ -216,7 +216,7 @@ struct.cue_point = {
 }
 
 struct.riff_plst_chunk = {
-	{'segments', 'sizedarray', {'uint32', 'le'}, 'riff_plst_segment'},
+	{'segments', 'array', {'uint32', 'le'}, 'riff_plst_segment'},
 }
 
 struct.riff_plst_segment = {
